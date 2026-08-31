@@ -10,8 +10,19 @@ class CheckRole
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (! $request->user() || ! in_array($request->user()->role, $roles)) {
-            abort(403, 'Anda tidak memiliki akses ke halaman ini.');
+        $user = $request->user();
+
+        if (! $user) {
+            abort(401);
+        }
+
+        if (! in_array($user->role, $roles)) {
+            // Bukan 403 statis — pantulkan otomatis ke dashboard sesuai role yang sedang aktif.
+            // Ini terutama menangani kasus Back-navigation lintas akun: begitu ditekan Back
+            // ke halaman milik akun lain, sistem langsung melempar balik ke dashboard akun
+            // yang sekarang aktif, bukan menampilkan halaman/pesan "tidak memiliki akses".
+            return redirect($user->dashboardRoute())
+                ->with('warning', 'Anda dialihkan karena halaman tersebut bukan untuk akun Anda saat ini.');
         }
 
         return $next($request);

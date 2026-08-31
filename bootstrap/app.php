@@ -14,11 +14,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
             'force.password.change' => \App\Http\Middleware\ForcePasswordChange::class,
-            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class, // <-- tambahkan/pastikan ini ada
+            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'no.cache' => \App\Http\Middleware\PreventBackHistoryCache::class,
         ]);
 
         $middleware->appendToGroup('web', [
             \App\Http\Middleware\ForcePasswordChange::class,
+            \App\Http\Middleware\PreventBackHistoryCache::class, 
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

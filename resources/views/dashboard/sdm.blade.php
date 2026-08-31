@@ -7,40 +7,49 @@
     <h1 class="font-display text-3xl text-ink">Admin SDM</h1>
 </div>
 
-{{-- Navigasi cepat --}}
-<div class="grid sm:grid-cols-3 gap-4 mb-10">
-    <a href="{{ route('sdm.pegawai.index') }}" class="card p-5 hover:border-accent transition-colors flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E4F56" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
-        </div>
-        <span class="font-medium text-ink text-sm">Kelola Pegawai</span>
-    </a>
-    <a href="{{ route('sdm.departemen.index') }}" class="card p-5 hover:border-accent transition-colors flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E4F56" stroke-width="2"><path d="M3 21h18M5 21V7l8-4 8 4v14"/></svg>
-        </div>
-        <span class="font-medium text-ink text-sm">Struktur Departemen</span>
-    </a>
-    <a href="{{ route('sdm.monitoring.index') }}" class="card p-5 hover:border-accent transition-colors flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E4F56" stroke-width="2"><path d="M3 3v18h18M7 15l4-6 3 4 5-8"/></svg>
-        </div>
-        <span class="font-medium text-ink text-sm">Monitoring Dispensasi</span>
-    </a>
-</div>
+{{-- Filter --}}
+<form method="GET" class="card p-4 mb-8 flex gap-3 flex-wrap items-end">
+    <div>
+        <label class="text-xs text-ink-soft mb-1 block">Periode / Tahun</label>
+        <select name="tahun" class="field-input" style="width:auto">
+            @foreach ($tahunTersedia as $t)
+            <option value="{{ $t }}" @selected($tahun == $t)>{{ $t }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div>
+        <label class="text-xs text-ink-soft mb-1 block">Departemen</label>
+        <select name="departemen_id" class="field-input" style="width:auto">
+            <option value="">Semua Departemen</option>
+            @foreach ($departemens as $d)
+            <option value="{{ $d->id }}" @selected($departemenId == $d->id)>{{ $d->nama_departemen }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div>
+        <label class="text-xs text-ink-soft mb-1 block">Status</label>
+        <select name="status" class="field-input" style="width:auto">
+            <option value="">Semua Status</option>
+            <option value="menunggu_persetujuan" @selected($status === 'menunggu_persetujuan')>Menunggu Persetujuan</option>
+            <option value="disetujui" @selected($status === 'disetujui')>Disetujui</option>
+            <option value="ditolak" @selected($status === 'ditolak')>Ditolak</option>
+        </select>
+    </div>
+    <button class="btn btn-primary">Terapkan Filter</button>
+    @if ($departemenId || $status)
+    <a href="{{ route('sdm.dashboard') }}" class="btn btn-outline">Reset</a>
+    @endif
+</form>
 
-{{-- Ringkasan statistik --}}
-<div class="mb-3">
-    <h2 class="font-display text-xl text-ink">Ringkasan Dispensasi</h2>
-</div>
-<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+{{-- 1. Total dispensasi --}}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
     <div class="card p-5">
-        <p class="text-xs text-ink-soft mb-1">Total Pengajuan</p>
+        <p class="text-xs text-ink-soft mb-1">Total Dispensasi</p>
         <p class="font-display text-2xl text-ink mono-data">{{ $totalSemua }}</p>
     </div>
     <div class="card p-5">
-        <p class="text-xs text-ink-soft mb-1">Menunggu</p>
-        <p class="font-display text-2xl text-[#C8862B] mono-data">{{ $totalDiajukan }}</p>
+        <p class="text-xs text-ink-soft mb-1">Menunggu Persetujuan</p>
+        <p class="font-display text-2xl text-[#C8862B] mono-data">{{ $totalMenunggu }}</p>
     </div>
     <div class="card p-5">
         <p class="text-xs text-ink-soft mb-1">Disetujui</p>
@@ -50,104 +59,114 @@
         <p class="text-xs text-ink-soft mb-1">Ditolak</p>
         <p class="font-display text-2xl text-[#C1483A] mono-data">{{ $totalDitolak }}</p>
     </div>
-    <div class="card p-5">
-        <p class="text-xs text-ink-soft mb-1">Tingkat Persetujuan</p>
-        <p class="font-display text-2xl text-primary mono-data">{{ $tingkatPersetujuan !== null ? $tingkatPersetujuan . '%' : '-' }}</p>
-    </div>
 </div>
 
-<div class="grid sm:grid-cols-2 gap-4 mb-10">
-    <div class="card p-5 flex justify-between items-center">
-        <div>
-            <p class="text-xs text-ink-soft mb-1">Rata-rata Waktu Persetujuan</p>
-            <p class="text-ink font-medium">{{ $rataRataJamPersetujuan !== null ? $rataRataJamPersetujuan . ' jam' : 'Belum ada data' }}</p>
-        </div>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17B8A6" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    </div>
-    <div class="card p-5 flex justify-between items-center">
-        <div>
-            <p class="text-xs text-ink-soft mb-1">Total Dieskalasi ke Asisten Manajer</p>
-            <p class="text-ink font-medium">{{ $totalEskalasi }} pengajuan</p>
-        </div>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17B8A6" stroke-width="1.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-    </div>
-</div>
-
-{{-- Grafik: per departemen & tren bulanan --}}
-<div class="grid lg:grid-cols-2 gap-4 mb-10">
-    <div class="card p-6">
-        <h3 class="font-semibold text-ink mb-4">Dispensasi per Departemen</h3>
-        @if ($perDepartemen->isEmpty())
-        <p class="text-sm text-ink-soft py-8 text-center">Belum ada data.</p>
-        @else
-        <canvas id="chartDepartemen" height="220"></canvas>
-        @endif
-    </div>
-
-    <div class="card p-6">
-        <h3 class="font-semibold text-ink mb-4">Tren 6 Bulan Terakhir</h3>
-        <canvas id="chartTren" height="220"></canvas>
-    </div>
-</div>
-
-{{-- Grafik: pola hari --}}
-<div class="card p-6 mb-10">
-    <h3 class="font-semibold text-ink mb-4">Pola Hari Pengajuan Dispensasi</h3>
-    <canvas id="chartHari" height="140"></canvas>
-</div>
-
-{{-- Tabel: tanggal & pegawai terbanyak --}}
+{{-- 2. Per bulan & 3. Berdasarkan waktu --}}
 <div class="grid lg:grid-cols-2 gap-4 mb-6">
-    <div class="card overflow-hidden">
-        <div class="px-6 py-4 border-b border-line">
-            <h3 class="font-semibold text-ink">Tanggal Terbanyak Dispensasi</h3>
-        </div>
-        <table class="table-pro">
-            <thead><tr><th>Tanggal</th><th>Jumlah</th></tr></thead>
-            <tbody>
-                @forelse ($tanggalTerbanyak as $t)
-                <tr>
-                    <td>{{ \Carbon\Carbon::parse($t['tanggal'])->translatedFormat('d M Y') }}</td>
-                    <td class="mono-data font-medium">{{ $t['total'] }}</td>
-                </tr>
-                @empty
-                <tr><td colspan="2" class="text-center text-ink-soft py-8">Belum ada data.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="card p-6">
+        <h3 class="font-semibold text-ink mb-4">Dispensasi per Bulan — {{ $tahun }}</h3>
+        <canvas id="chartBulan" height="220"></canvas>
     </div>
+    <div class="card p-6">
+        <h3 class="font-semibold text-ink mb-4">Dispensasi Berdasarkan Waktu</h3>
+        <canvas id="chartWaktu" height="220"></canvas>
+    </div>
+</div>
 
-    <div class="card overflow-hidden">
-        <div class="px-6 py-4 border-b border-line">
-            <h3 class="font-semibold text-ink">Pegawai Terbanyak Mengajukan</h3>
-        </div>
-        <table class="table-pro">
-            <thead><tr><th>Nama</th><th>Departemen</th><th>Jumlah</th></tr></thead>
-            <tbody>
-                @forelse ($pegawaiTerbanyak as $p)
-                <tr>
-                    <td class="font-medium">{{ $p['nama'] }}</td>
-                    <td class="text-ink-soft">{{ $p['departemen'] }}</td>
-                    <td class="mono-data font-medium">{{ $p['total'] }}</td>
-                </tr>
-                @empty
-                <tr><td colspan="3" class="text-center text-ink-soft py-8">Belum ada data.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+{{-- 4. Per departemen --}}
+<div class="card p-6 mb-6">
+    <h3 class="font-semibold text-ink mb-4">Dispensasi Berdasarkan Departemen</h3>
+    @if ($perDepartemen->isEmpty())
+    <p class="text-sm text-ink-soft py-8 text-center">Belum ada data.</p>
+    @else
+    <canvas id="chartDepartemen" height="220"></canvas>
+    @endif
+</div>
+
+{{-- 5. Tabel dispensasi terbaru --}}
+<div class="card overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-line">
+        <h3 class="font-semibold text-ink">Dispensasi Terbaru</h3>
     </div>
+    <table class="table-pro">
+        <thead>
+            <tr><th>Nomor</th><th>Pegawai</th><th>Departemen</th><th>Tanggal</th><th>Diajukan</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            @forelse ($terbaru as $d)
+            @php
+                $statusLabel = match ($d->status_pengajuan) {
+                    'menunggu_persetujuan' => 'Menunggu',
+                    'disetujui' => 'Disetujui',
+                    'ditolak' => 'Ditolak',
+                    default => ucfirst($d->status_pengajuan),
+                };
+                $statusClass = match ($d->status_pengajuan) {
+                    'menunggu_persetujuan' => 'badge-menunggu',
+                    'disetujui' => 'badge-disetujui',
+                    'ditolak' => 'badge-ditolak',
+                    default => 'badge-default',
+                };
+            @endphp
+            <tr>
+                <td class="mono-data text-ink-soft">{{ $d->nomor_dispensasi }}</td>
+                <td class="font-medium">{{ $d->pegawai->nama_pegawai }}</td>
+                <td class="text-ink-soft">{{ $d->departemen?->nama_departemen ?? '-' }}</td>
+                <td>{{ $d->tanggal_dispensasi->format('d M Y') }}</td>
+                <td class="text-ink-soft text-xs">{{ $d->created_at->diffForHumans() }}</td>
+                <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
+            </tr>
+            @empty
+            <tr><td colspan="6" class="text-center text-ink-soft py-10">Tidak ada data sesuai filter.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
-    const primary = '#0E4F56';
-    const accent = '#17B8A6';
-    const accentSoft = '#D9F3EF';
-    const ink = '#16262A';
-    const line = '#E2E8E7';
+    const primary = '#163A5C';
+    const accent = '#2BAFC7';
+    const line = '#E2E8EC';
+    const palet = ['#2BAFC7', '#163A5C', '#A9BE2E', '#C8862B', '#C1483A', '#8A6FBF', '#5C6B78'];
 
     Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
-    Chart.defaults.color = '#5B6D70';
+    Chart.defaults.color = '#5C6B78';
+
+    new Chart(document.getElementById('chartBulan'), {
+        type: 'bar',
+        data: {
+            labels: @json($perBulan->pluck('label')),
+            datasets: [{
+                label: 'Jumlah Pengajuan',
+                data: @json($perBulan->pluck('total')),
+                backgroundColor: accent,
+                borderRadius: 6,
+                barThickness: 22,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: line } },
+                x: { grid: { display: false } },
+            }
+        }
+    });
+
+    new Chart(document.getElementById('chartWaktu'), {
+        type: 'doughnut',
+        data: {
+            labels: @json($perWaktu->pluck('label')),
+            datasets: [{
+                data: @json($perWaktu->pluck('total')),
+                backgroundColor: palet,
+            }]
+        },
+        options: {
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } } },
+        }
+    });
 
     @if ($perDepartemen->isNotEmpty())
     new Chart(document.getElementById('chartDepartemen'), {
@@ -157,63 +176,20 @@
             datasets: [{
                 label: 'Jumlah Pengajuan',
                 data: @json($perDepartemen->pluck('total')),
-                backgroundColor: accent,
+                backgroundColor: primary,
                 borderRadius: 6,
-                barThickness: 28,
+                barThickness: 18,
             }]
         },
         options: {
+            indexAxis: 'y',
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: line } },
-                x: { grid: { display: false } },
+                x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: line } },
+                y: { grid: { display: false } },
             }
         }
     });
     @endif
-
-    new Chart(document.getElementById('chartTren'), {
-        type: 'line',
-        data: {
-            labels: @json($trenBulanan->pluck('label')),
-            datasets: [{
-                label: 'Pengajuan',
-                data: @json($trenBulanan->pluck('total')),
-                borderColor: primary,
-                backgroundColor: accentSoft,
-                fill: true,
-                tension: 0.35,
-                pointBackgroundColor: primary,
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: line } },
-                x: { grid: { display: false } },
-            }
-        }
-    });
-
-    new Chart(document.getElementById('chartHari'), {
-        type: 'bar',
-        data: {
-            labels: @json($polaHari->pluck('label')),
-            datasets: [{
-                label: 'Jumlah Pengajuan',
-                data: @json($polaHari->pluck('total')),
-                backgroundColor: primary,
-                borderRadius: 6,
-                barThickness: 36,
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: line } },
-                x: { grid: { display: false } },
-            }
-        }
-    });
 </script>
 @endsection

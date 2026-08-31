@@ -21,9 +21,13 @@ class PasswordChangeController extends Controller
 
         $user = Auth::user();
         $user->update([
-            'password' => Hash::make($request->password),
-            'must_change_password' => false,
+            'password'              => Hash::make($request->password),
+            'must_change_password'  => false,
         ]);
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('login')
             ->with('success', 'Password berhasil diganti. Silakan login kembali.');

@@ -9,29 +9,23 @@ class StorePegawaiRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->isAdminSdm();
+        return true; // Otorisasi role Admin SDM ditangani middleware route
     }
 
     public function rules(): array
     {
-        $userId = $this->route('pegawai')?->id;
+        $pegawaiId = $this->route('pegawai')?->id;
 
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($userId)],
-            'password' => [$userId ? 'nullable' : 'required', 'min:8'],
-            'role' => ['required', Rule::in(['pegawai', 'manajer_departemen', 'asisten_manajer', 'admin_sdm'])],
-            'departemen_id' => ['nullable', 'required_if:role,manajer_departemen', 'exists:departemens,id'],
-            'subdepartemen_id' => ['nullable', 'required_if:role,asisten_manajer', 'exists:subdepartemens,id'],
-            'is_active' => ['boolean'],
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'departemen_id.required_if' => 'Pilih departemen yang akan dipimpin.',
-            'subdepartemen_id.required_if' => 'Pilih subdepartemen yang akan ditangani.',
+            'nik'              => ['required', 'string', 'max:20', Rule::unique('pegawais', 'nik')->ignore($pegawaiId)],
+            'nama_pegawai'     => ['required', 'string', 'max:100'],
+            'jenis_pegawai'    => ['required', Rule::in(['pegawai', 'pekerja_lapangan'])],
+            'jabatan'          => ['required', 'string', 'max:100'],
+            'departemen_id'    => ['required', 'exists:departemens,id'],
+            'subdepartemen_id' => ['nullable', 'exists:subdepartemens,id'],
+            'no_telepon'       => ['nullable', 'string', 'max:20'],
+            'email'            => ['nullable', 'email', 'max:100'],
+            'status'           => ['required', Rule::in(['aktif', 'nonaktif'])],
         ];
     }
 }

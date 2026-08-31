@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -12,29 +14,41 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
+    /**
+     * KNF-01: login pakai username/NIK ATAU email. Karena dua kolom berbeda
+     * (username vs email) tidak bisa dicek sekaligus lewat Auth::attempt()
+     * biasa (itu cuma cocokkan SATU kolom persis), user dicari manual dulu
+     * baru password-nya diverifikasi dengan Hash::check().
+     */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+        $request->validate([
+            'login'    => ['required', 'string'],
+            'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            return back()->withErrors([
-                'email' => 'Email atau password salah.',
-            ])->onlyInput('email');
-        }
+        $user = User::where('username', $request->login)
+            ->orWhere('email', $request->login)
+            ->first();
 
-        $user = Auth::user();
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            return back()->withErrors([
+                'login' => 'Username/email atau password salah.',
+            ])->onlyInput('login');
+        }
 
         if (! $user->is_active) {
-            Auth::logout();
             return back()->withErrors([
-                'email' => 'Akun Anda tidak aktif. Hubungi Divisi SDM.',
-            ]);
+                'login' => 'Akun Anda tidak aktif. Hubungi Admin SDM.',
+            ])->onlyInput('login');
         }
 
+        Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
+
+        if ($user->must_change_password) {
+            return redirect()->route('password.change.form');
+        }
 
         return redirect()->intended($user->dashboardRoute());
     }
@@ -46,15 +60,5 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/login');
-    }
-
-    private function redirectPath(string $role): string
-    {
-        return match ($role) {
-            'admin_sdm' => route('sdm.dashboard'),
-            'manajer_departemen' => route('dashboard.manajer'),
-            'asisten_manajer' => route('dashboard.asmen'),
-            default => route('dashboard.pegawai'),
-        };
     }
 }

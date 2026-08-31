@@ -1,97 +1,98 @@
 @extends('layouts.app')
 @section('title', 'Kelola Pegawai')
+@section('page-title', 'Kelola Pegawai')
 
 @section('content')
-<div class="flex justify-between items-end mb-8">
+<div class="flex items-start justify-between gap-4 mb-8 flex-wrap">
     <div>
         <p class="text-xs font-semibold tracking-widest text-accent uppercase mb-1">Admin SDM</p>
-        <h1 class="font-display text-3xl text-ink">Kelola Data Pegawai</h1>
+        <h1 class="font-display text-3xl text-ink">Kelola Pegawai</h1>
     </div>
     <div class="flex gap-2">
-        <a href="{{ route('sdm.pegawai.import.form') }}" class="btn btn-outline">Import Excel</a>
-        <a href="{{ route('sdm.pegawai.create') }}" class="btn btn-primary">+ Tambah Pegawai</a>
+        <a href="{{ route('sdm.pegawai.import.form') }}" class="btn btn-outline">
+            <i class="fas fa-file-import"></i> Import Excel
+        </a>
+        <a href="{{ route('sdm.pegawai.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Tambah Pegawai
+        </a>
     </div>
 </div>
 
-<div class="space-y-3" x-data="{ openDept: null }">
-    @foreach ($departemens as $dept)
-    <div class="card overflow-hidden">
-        <button @click="openDept = openDept === {{ $dept->id }} ? null : {{ $dept->id }}"
-                class="w-full flex justify-between items-center px-6 py-4 hover:bg-canvas">
-            <div class="text-left">
-                <span class="font-semibold text-ink">{{ $dept->nama_departemen }}</span>
-                <span class="text-xs text-ink-soft ml-2">
-                    ({{ $dept->subdepartemens->sum(fn($s) => $s->pegawais->count()) }} pegawai)
-                </span>
-                <div class="text-xs text-ink-soft mt-0.5">Manajer: {{ $dept->manajer?->name ?? '— belum ditentukan —' }}</div>
-            </div>
-            <span class="text-ink-soft text-xs" x-text="openDept === {{ $dept->id }} ? '▲' : '▼'"></span>
-        </button>
-
-        <div x-show="openDept === {{ $dept->id }}" x-cloak class="border-t border-line">
-            @forelse ($dept->subdepartemens as $sub)
-            <div class="px-6 py-4 border-b border-line last:border-b-0">
-                <div class="text-sm font-medium text-ink mb-3">
-                    {{ $sub->nama_subdepartemen }}
-                    <span class="text-xs text-ink-soft font-normal">— Asisten Manajer: {{ $sub->asistenManajer?->name ?? '-' }}</span>
-                </div>
-
-                @if ($sub->pegawais->isEmpty())
-                    <p class="text-xs text-ink-soft">Belum ada pegawai di subdepartemen ini.</p>
-                @else
-                <table class="table-pro">
-                    <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
-                    <tbody>
-                        @foreach ($sub->pegawais as $p)
-                        <tr>
-                            <td class="font-medium">{{ $p->name }}</td>
-                            <td class="text-ink-soft">{{ $p->email }}</td>
-                            <td class="capitalize">{{ str_replace('_', ' ', $p->role) }}</td>
-                            <td><span class="badge {{ $p->is_active ? 'badge-disetujui' : 'badge-neutral' }}">{{ $p->is_active ? 'Aktif' : 'Nonaktif' }}</span></td>
-                            <td>
-                                <div class="flex gap-3">
-                                    <a href="{{ route('sdm.pegawai.edit', $p) }}" class="text-primary font-medium hover:underline">Edit</a>
-                                    @if ($p->is_active)
-                                    <form method="POST" action="{{ route('sdm.pegawai.destroy', $p) }}" onsubmit="return confirm('Nonaktifkan pegawai ini?')">
-                                        @csrf @method('DELETE')
-                                        <button class="text-[#C1483A] font-medium hover:underline">Nonaktifkan</button>
-                                    </form>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                @endif
-            </div>
-            @empty
-            <p class="px-6 py-4 text-xs text-ink-soft">Belum ada subdepartemen di departemen ini.</p>
-            @endforelse
-        </div>
+{{-- Filter --}}
+<form method="GET" class="card p-4 mb-6 flex gap-3 flex-wrap items-end">
+    <div class="flex-1 min-w-[200px]">
+        <label class="text-xs text-ink-soft mb-1 block">Cari (NIK / Nama)</label>
+        <input type="text" name="search" value="{{ $search }}" class="field-input" placeholder="Ketik NIK atau nama...">
     </div>
-    @endforeach
-
-    @if ($tanpaSubdepartemen->isNotEmpty())
-    <div class="card overflow-hidden">
-        <div class="px-6 py-4 font-semibold text-ink border-b border-line">
-            Tanpa Subdepartemen <span class="text-xs text-ink-soft font-normal ml-2">({{ $tanpaSubdepartemen->count() }} pegawai)</span>
-        </div>
-        <table class="table-pro">
-            <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-                @foreach ($tanpaSubdepartemen as $p)
-                <tr>
-                    <td class="font-medium">{{ $p->name }}</td>
-                    <td class="text-ink-soft">{{ $p->email }}</td>
-                    <td class="capitalize">{{ str_replace('_', ' ', $p->role) }}</td>
-                    <td><span class="badge {{ $p->is_active ? 'badge-disetujui' : 'badge-neutral' }}">{{ $p->is_active ? 'Aktif' : 'Nonaktif' }}</span></td>
-                    <td><a href="{{ route('sdm.pegawai.edit', $p) }}" class="text-primary font-medium hover:underline">Edit</a></td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+    <div>
+        <label class="text-xs text-ink-soft mb-1 block">Departemen</label>
+        <select name="departemen_id" class="field-input" style="width:auto">
+            <option value="">Semua Departemen</option>
+            @foreach ($departemens as $d)
+            <option value="{{ $d->id }}" @selected($departemenId == $d->id)>{{ $d->nama_departemen }}</option>
+            @endforeach
+        </select>
     </div>
+    <div>
+        <label class="text-xs text-ink-soft mb-1 block">Status</label>
+        <select name="status" class="field-input" style="width:auto">
+            <option value="">Semua Status</option>
+            <option value="aktif" @selected($status === 'aktif')>Aktif</option>
+            <option value="nonaktif" @selected($status === 'nonaktif')>Nonaktif</option>
+        </select>
+    </div>
+    <button class="btn btn-primary">Terapkan</button>
+    @if ($search || $departemenId || $status)
+    <a href="{{ route('sdm.pegawai.index') }}" class="btn btn-outline">Reset</a>
     @endif
+</form>
+
+<div class="table-scroll-wrapper">
+    <table class="table-pro">
+        <thead>
+            <tr>
+                <th>NIK</th>
+                <th>Nama</th>
+                <th>Jabatan</th>
+                <th>Departemen</th>
+                <th>Subdepartemen</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($pegawais as $p)
+            <tr>
+                <td class="mono-data text-ink-soft">{{ $p->nik }}</td>
+                <td class="font-medium">{{ $p->nama_pegawai }}</td>
+                <td>{{ $p->jabatan }}</td>
+                <td class="text-ink-soft">{{ $p->departemen->nama_departemen }}</td>
+                <td class="text-ink-soft">{{ $p->subdepartemen?->nama_subdepartemen ?? '-' }}</td>
+                <td>
+                    <span class="badge {{ $p->status === 'aktif' ? 'badge-disetujui' : 'badge-default' }}">
+                        {{ ucfirst($p->status) }}
+                    </span>
+                </td>
+                <td class="text-right whitespace-nowrap">
+                    <a href="{{ route('sdm.pegawai.edit', $p) }}" class="btn btn-sm btn-outline">
+                        <i class="fas fa-pen"></i>
+                    </a>
+                    @if ($p->status === 'aktif')
+                    <form method="POST" action="{{ route('sdm.pegawai.destroy', $p) }}" class="inline"
+                          onsubmit="return confirm('Nonaktifkan {{ $p->nama_pegawai }}?');">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-sm btn-danger"><i class="fas fa-ban"></i></button>
+                    </form>
+                    @endif
+                </td>
+            </tr>
+            @empty
+            <tr><td colspan="7" class="text-center text-ink-soft py-10">Tidak ada data pegawai sesuai filter.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
 </div>
+
+{{ $pegawais->links() }}
 @endsection

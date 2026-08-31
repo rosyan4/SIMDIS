@@ -9,33 +9,53 @@ use Illuminate\Support\Facades\Auth;
 
 class ApprovalController extends Controller
 {
+    /**
+     * Antrian Manajer Departemen: pengajuan di departemennya sendiri, HANYA
+     * kalau dia sendiri sedang berstatus aktif. Kalau sedang berhalangan,
+     * dia tidak lagi berwenang — pengajuan sudah jadi tanggung jawab
+     * Asisten Manajer, jadi ditampilkan pesan, bukan daftar kosong yang
+     * membingungkan.
+     */
     public function indexManajer()
     {
         $user = Auth::user();
 
-        $dispensasis = Dispensasi::whereHas('pegawai.subdepartemen.departemen', function ($q) use ($user) {
-            $q->where('manajer_id', $user->id);
-        })
-        ->where('status', 'diajukan')
-        ->with('pegawai.subdepartemen.departemen')
-        ->latest()
-        ->paginate(10);
+        if (! $user->sedangAktif()) {
+            return view('approval.manajer', [
+                'dispensasis' => Dispensasi::whereRaw('1 = 0')->paginate(10),
+                'sedangBerhalangan' => true,
+            ]);
+        }
 
-        return view('approval.manajer', compact('dispensasis'));
+        $dispensasis = Dispensasi::where('departemen_id', $user->departemen_id)
+            ->where('status_pengajuan', 'menunggu_persetujuan')
+            ->with('pegawai', 'subdepartemen')
+            ->latest('tanggal_pengajuan')
+            ->paginate(10);
+
+        return view('approval.manajer', ['dispensasis' => $dispensasis, 'sedangBerhalangan' => false]);
     }
 
+    /**
+     * Antrian Asisten Manajer: pengajuan di subdepartemennya sendiri, HANYA
+     * kalau Manajer Departemen dari departemen terkait SEDANG berhalangan.
+     * Dicek dinamis (whereHas ke departemen->manajers), bukan dari flag
+     * escalated_at statis — supaya kalau status Manajer berubah kembali jadi
+     * aktif, pengajuan otomatis hilang dari antrian Asisten Manajer tanpa
+     * perlu proses "un-escalate" terpisah.
+     */
     public function indexAsmen()
     {
         $user = Auth::user();
 
-        $dispensasis = Dispensasi::whereHas('pegawai.subdepartemen', function ($q) use ($user) {
-            $q->where('asisten_manajer_id', $user->id);
-        })
-        ->where('status', 'diajukan')
-        ->whereNotNull('escalated_at')
-        ->with('pegawai.subdepartemen')
-        ->latest()
-        ->paginate(10);
+        $dispensasis = Dispensasi::where('subdepartemen_id', $user->subdepartemen_id)
+            ->where('status_pengajuan', 'menunggu_persetujuan')
+            ->whereHas('departemen.manajers', function ($q) {
+                $q->where('is_active', true)->where('status_manajer', 'berhalangan');
+            })
+            ->with('pegawai', 'subdepartemen')
+            ->latest('tanggal_pengajuan')
+            ->paginate(10);
 
         return view('approval.asmen', compact('dispensasis'));
     }
@@ -46,7 +66,7 @@ class ApprovalController extends Controller
      */
     public function show(Dispensasi $dispensasi)
     {
-        $dispensasi->load('pegawai.subdepartemen.departemen', 'approver');
+        $dispensasi->load('pegawai', 'departemen', 'subdepartemen', 'adminDepartemen', 'diprosesOleh');
 
         $this->authorizeAccess($dispensasi);
 
@@ -58,15 +78,15 @@ class ApprovalController extends Controller
         $this->authorizeAccess($dispensasi);
 
         $dispensasi->update([
-            'status' => 'disetujui',
-            'approved_by' => Auth::id(),
-            'approved_at' => now(),
-            'catatan_persetujuan' => $request->input('catatan'),
+            'status_pengajuan'     => 'disetujui',
+            'diproses_oleh_id'     => Auth::id(),
+            'tanggal_keputusan'    => now(),
+            'catatan_persetujuan'  => $request->input('catatan'),
         ]);
 
-        $dispensasi->pegawai->notify(new DispensasiDiputuskan($dispensasi));
+        $this->beriTahuAdminDepartemen($dispensasi);
 
-        return redirect()->route('dashboard.' . $this->dashboardSuffix())
+        return redirect(Auth::user()->dashboardRoute())
             ->with('success', "Dispensasi {$dispensasi->nomor_dispensasi} disetujui.");
     }
 
@@ -80,34 +100,42 @@ class ApprovalController extends Controller
         $this->authorizeAccess($dispensasi);
 
         $dispensasi->update([
-            'status' => 'ditolak',
-            'approved_by' => Auth::id(),
-            'approved_at' => now(),
-            'catatan_persetujuan' => $request->input('catatan'),
+            'status_pengajuan'     => 'ditolak',
+            'diproses_oleh_id'     => Auth::id(),
+            'tanggal_keputusan'    => now(),
+            'catatan_persetujuan'  => $request->input('catatan'),
         ]);
 
-        $dispensasi->pegawai->notify(new DispensasiDiputuskan($dispensasi));
+        $this->beriTahuAdminDepartemen($dispensasi);
 
-        return redirect()->route('dashboard.' . $this->dashboardSuffix())
+        return redirect(Auth::user()->dashboardRoute())
             ->with('success', "Dispensasi {$dispensasi->nomor_dispensasi} ditolak.");
     }
 
-    private function dashboardSuffix(): string
+    /**
+     * Pegawai TIDAK punya akun/login, jadi tidak bisa menerima notifikasi
+     * langsung. Yang diberi tahu adalah Admin Departemen yang menginput
+     * pengajuan tersebut — dialah yang menyampaikan hasilnya ke pegawai
+     * secara manual/offline.
+     */
+    private function beriTahuAdminDepartemen(Dispensasi $dispensasi): void
     {
-        return Auth::user()->isManajerDepartemen() ? 'manajer' : 'asmen';
+        $dispensasi->adminDepartemen?->notify(new DispensasiDiputuskan($dispensasi));
     }
 
     private function authorizeAccess(Dispensasi $dispensasi): void
     {
         $user = Auth::user();
-        $subdepartemen = $dispensasi->pegawai->subdepartemen;
 
         $isManajerTerkait = $user->isManajerDepartemen()
-            && $subdepartemen?->departemen?->manajer_id === $user->id;
+            && $dispensasi->departemen_id === $user->departemen_id
+            && $user->sedangAktif();
 
         $isAsmenTerkait = $user->isAsistenManajer()
-            && $subdepartemen?->asisten_manajer_id === $user->id
-            && $dispensasi->escalated_at !== null;
+            && $dispensasi->subdepartemen_id === $user->subdepartemen_id
+            && $dispensasi->departemen()
+                ->whereHas('manajers', fn ($q) => $q->where('is_active', true)->where('status_manajer', 'berhalangan'))
+                ->exists();
 
         abort_unless($isManajerTerkait || $isAsmenTerkait, 403, 'Anda tidak berwenang mengakses pengajuan ini.');
     }

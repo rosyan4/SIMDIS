@@ -1,109 +1,164 @@
 @extends('layouts.app')
 @section('title', 'Detail Pengajuan Dispensasi')
+@section('page-title', 'Detail Pengajuan')
 
 @section('content')
-<div class="max-w-2xl" x-data="{ showReject: false }">
-    <a href="{{ route('dashboard.' . (auth()->user()->isManajerDepartemen() ? 'manajer' : 'asmen')) }}"
-       class="text-sm text-ink-soft hover:text-primary inline-flex items-center gap-1 mb-5">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        Kembali ke Daftar
-    </a>
+@php
+    $statusLabel = match ($dispensasi->status_pengajuan) {
+        'menunggu_persetujuan' => 'Menunggu Persetujuan',
+        'disetujui' => 'Disetujui',
+        'ditolak' => 'Ditolak',
+        default => ucfirst($dispensasi->status_pengajuan),
+    };
+    $statusClass = match ($dispensasi->status_pengajuan) {
+        'menunggu_persetujuan' => 'badge-menunggu',
+        'disetujui' => 'badge-disetujui',
+        'ditolak' => 'badge-ditolak',
+        default => 'badge-default',
+    };
+    $waktuLabel = ['pagi' => 'Pagi', 'istirahat' => 'Istirahat', 'siang' => 'Siang', 'sore' => 'Sore'][$dispensasi->waktu_dispensasi] ?? $dispensasi->waktu_dispensasi;
+@endphp
 
-    <div class="flex justify-between items-start mb-8">
-        <div>
-            <p class="text-xs font-semibold tracking-widest text-accent uppercase mb-1">Tinjau Pengajuan</p>
-            <h1 class="font-display text-2xl text-ink mono-data">{{ $dispensasi->nomor_dispensasi }}</h1>
-        </div>
-        <span class="badge badge-{{ $dispensasi->status }}">{{ ucfirst($dispensasi->status) }}</span>
+<a href="{{ url()->previous() }}" class="text-xs text-accent font-semibold mb-4 inline-flex items-center gap-1">
+    <i class="fas fa-arrow-left"></i> Kembali
+</a>
+
+<div class="flex items-start justify-between gap-4 mb-8 flex-wrap">
+    <div>
+        <p class="mono-data text-xs text-ink-soft mb-1">{{ $dispensasi->nomor_dispensasi }}</p>
+        <h1 class="font-display text-3xl text-ink">{{ $dispensasi->pegawai->nama_pegawai }}</h1>
     </div>
+    <span class="badge {{ $statusClass }} text-sm">{{ $statusLabel }}</span>
+</div>
 
-    <div class="card divide-y divide-line mb-6">
-        <div class="px-6 py-4 flex justify-between text-sm">
-            <span class="text-ink-soft">Nama Pegawai</span>
-            <span class="font-medium text-ink">{{ $dispensasi->pegawai->name }}</span>
-        </div>
-        <div class="px-6 py-4 flex justify-between text-sm">
-            <span class="text-ink-soft">Departemen</span>
-            <span class="font-medium text-ink">
-                {{ $dispensasi->pegawai->subdepartemen?->departemen?->nama_departemen ?? '-' }}
-                <span class="text-ink-soft font-normal">/ {{ $dispensasi->pegawai->subdepartemen?->nama_subdepartemen ?? '-' }}</span>
-            </span>
-        </div>
-        <div class="px-6 py-4 flex justify-between text-sm">
-            <span class="text-ink-soft">Tanggal Dispensasi</span>
-            <span class="font-medium text-ink">{{ $dispensasi->tanggal_dispensasi->format('d M Y') }}</span>
-        </div>
-        <div class="px-6 py-4 flex justify-between text-sm">
-            <span class="text-ink-soft">Waktu</span>
-            <span class="font-medium text-ink mono-data">{{ $dispensasi->jam_mulai ?? '-' }} — {{ $dispensasi->jam_selesai ?? '-' }}</span>
-        </div>
-        <div class="px-6 py-4 text-sm">
-            <span class="text-ink-soft block mb-1">Keterangan</span>
-            <span class="text-ink">{{ $dispensasi->alasan }}</span>
-        </div>
-        <div class="px-6 py-4 flex justify-between items-center text-sm">
-            <span class="text-ink-soft">Bukti Pendukung</span>
+<div class="grid lg:grid-cols-3 gap-4">
+    {{-- Kolom kiri: detail pengajuan --}}
+    <div class="lg:col-span-2 space-y-4">
+        <div class="card p-6">
+            <h3 class="font-semibold text-ink mb-4">Detail Pengajuan</h3>
+
+            <dl class="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Pegawai</dt>
+                    <dd class="text-ink font-medium">{{ $dispensasi->pegawai->nama_pegawai }}</dd>
+                    <dd class="text-ink-soft text-xs mono-data">{{ $dispensasi->pegawai->nik }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Jabatan</dt>
+                    <dd class="text-ink">{{ $dispensasi->pegawai->jabatan }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Departemen</dt>
+                    <dd class="text-ink">{{ $dispensasi->departemen->nama_departemen }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Subdepartemen</dt>
+                    <dd class="text-ink">{{ $dispensasi->subdepartemen?->nama_subdepartemen ?? '-' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Tanggal Dispensasi</dt>
+                    <dd class="text-ink font-medium">{{ $dispensasi->tanggal_dispensasi->format('d M Y') }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Waktu</dt>
+                    <dd class="text-ink">{{ $waktuLabel }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Tanggal Pengajuan</dt>
+                    <dd class="text-ink">{{ $dispensasi->tanggal_pengajuan->format('d M Y') }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Diinput oleh</dt>
+                    <dd class="text-ink">{{ $dispensasi->adminDepartemen?->name ?? '-' }}</dd>
+                </div>
+            </dl>
+
+            <div class="mt-5 pt-5 border-t border-line">
+                <dt class="text-ink-soft text-xs mb-1">Keterangan / Alasan</dt>
+                <dd class="text-ink text-sm leading-relaxed">{{ $dispensasi->keterangan }}</dd>
+            </div>
+
             @if ($dispensasi->bukti_pendukung)
-                <a href="{{ Storage::url($dispensasi->bukti_pendukung) }}" target="_blank" class="text-primary font-medium hover:underline">Lihat File</a>
-            @else
-                <span class="text-ink-soft italic">Tidak dilampirkan</span>
+            <div class="mt-5 pt-5 border-t border-line">
+                <dt class="text-ink-soft text-xs mb-2">Bukti Pendukung</dt>
+                <a href="{{ asset('storage/' . $dispensasi->bukti_pendukung) }}" target="_blank"
+                   class="btn btn-outline btn-sm inline-flex">
+                    <i class="fas fa-paperclip"></i> Lihat Berkas
+                </a>
+            </div>
             @endif
         </div>
-        <div class="px-6 py-4 flex justify-between text-sm">
-            <span class="text-ink-soft">Diajukan</span>
-            <span class="text-ink">{{ $dispensasi->created_at->format('d M Y, H:i') }} ({{ $dispensasi->created_at->diffForHumans() }})</span>
-        </div>
-        @if ($dispensasi->escalated_at)
-        <div class="px-6 py-4 flex justify-between text-sm">
-            <span class="text-ink-soft">Status Eskalasi</span>
-            <span class="text-[#C8862B] font-medium">Dieskalasi ke Asisten Manajer sejak {{ $dispensasi->escalated_at->format('d M Y, H:i') }}</span>
+
+        {{-- Kalau sudah diputuskan, tampilkan catatannya --}}
+        @if ($dispensasi->sudahDiputuskan())
+        <div class="card p-6">
+            <h3 class="font-semibold text-ink mb-4">Riwayat Keputusan</h3>
+            <dl class="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm mb-4">
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Diputuskan oleh</dt>
+                    <dd class="text-ink">{{ $dispensasi->diprosesOleh?->name ?? '-' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-ink-soft text-xs mb-0.5">Tanggal Keputusan</dt>
+                    <dd class="text-ink">{{ $dispensasi->tanggal_keputusan?->format('d M Y, H:i') ?? '-' }}</dd>
+                </div>
+            </dl>
+            @if ($dispensasi->catatan_persetujuan)
+            <div class="pt-4 border-t border-line">
+                <dt class="text-ink-soft text-xs mb-1">Catatan</dt>
+                <dd class="text-ink text-sm leading-relaxed">{{ $dispensasi->catatan_persetujuan }}</dd>
+            </div>
+            @endif
         </div>
         @endif
     </div>
 
-    @if ($dispensasi->status === 'diajukan')
-    {{-- Preview bukti langsung di halaman kalau berupa gambar --}}
-    @if ($dispensasi->bukti_pendukung && Str::endsWith(strtolower($dispensasi->bukti_pendukung), ['.jpg', '.jpeg', '.png']))
-    <div class="card p-4 mb-6">
-        <p class="text-xs text-ink-soft mb-3">Pratinjau Bukti Pendukung</p>
-        <img src="{{ Storage::url($dispensasi->bukti_pendukung) }}" alt="Bukti pendukung" class="rounded-lg border border-line max-h-96 mx-auto">
-    </div>
-    @endif
+    {{-- Kolom kanan: aksi keputusan --}}
+    <div class="lg:col-span-1">
+        @if ($dispensasi->isMenungguPersetujuan())
+        <div class="card p-6" x-data="{ tolakOpen: false }">
+            <h3 class="font-semibold text-ink mb-2">Ambil Keputusan</h3>
+            <p class="text-xs text-ink-soft mb-5">Keputusan ini tidak bisa diubah setelah disimpan.</p>
 
-    <div class="card p-6">
-        <p class="font-semibold text-ink mb-4">Keputusan</p>
-
-        <div x-show="!showReject">
             <form method="POST" action="{{ route('dispensasi.approve', $dispensasi) }}" class="mb-3">
                 @csrf
-                <label class="field-label">Catatan (opsional)</label>
-                <textarea name="catatan" rows="2" class="field-input mb-3" placeholder="Catatan tambahan untuk pegawai..."></textarea>
-                <button type="submit" class="btn w-full" style="background:#2E9E6B;color:#fff;">Setujui Pengajuan</button>
+                <div class="mb-3">
+                    <label class="field-label" for="catatan_setuju">Catatan <span class="text-ink-soft font-normal">(opsional)</span></label>
+                    <textarea id="catatan_setuju" name="catatan" class="field-input" rows="3" placeholder="Catatan tambahan (opsional)..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-full" onclick="return confirm('Setujui pengajuan {{ $dispensasi->nomor_dispensasi }}?');">
+                    <i class="fas fa-check"></i> Setujui
+                </button>
             </form>
-            <button @click="showReject = true" class="btn btn-outline w-full">Tolak Pengajuan</button>
-        </div>
 
-        <form x-show="showReject" x-cloak method="POST" action="{{ route('dispensasi.reject', $dispensasi) }}">
-            @csrf
-            <label class="field-label">Alasan Penolakan <span class="text-[#C1483A]">*</span></label>
-            <textarea name="catatan" rows="3" class="field-input mb-3" placeholder="Jelaskan alasan penolakan, akan dikirim ke pegawai..." required></textarea>
-            @error('catatan') <p class="field-error mb-3">{{ $message }}</p> @enderror
-            <div class="flex gap-3">
-                <button type="button" @click="showReject = false" class="btn btn-outline flex-1">Batal</button>
-                <button type="submit" class="btn btn-danger flex-1">Kirim Penolakan</button>
+            <button type="button" @click="tolakOpen = true" class="btn btn-danger w-full">
+                <i class="fas fa-xmark"></i> Tolak
+            </button>
+
+            {{-- Modal alasan penolakan --}}
+            <div x-show="tolakOpen" x-cloak class="fixed inset-0 z-[300] flex items-center justify-center p-4" style="background: rgba(15,23,42,.48);">
+                <div @click.outside="tolakOpen = false" class="card w-full max-w-sm p-6">
+                    <h3 class="font-bold text-ink mb-1">Tolak Pengajuan</h3>
+                    <p class="text-sm text-ink-soft mb-4">Alasan penolakan wajib diisi, minimal 5 karakter — akan disampaikan ke Admin Departemen.</p>
+
+                    <form method="POST" action="{{ route('dispensasi.reject', $dispensasi) }}">
+                        @csrf
+                        <textarea name="catatan" class="field-input mb-3" rows="3" placeholder="Alasan penolakan..." required minlength="5"></textarea>
+                        @error('catatan') <p class="field-error mb-3">{{ $message }}</p> @enderror
+                        <div class="flex gap-2 justify-end">
+                            <button type="button" @click="tolakOpen = false" class="btn btn-outline">Batal</button>
+                            <button type="submit" class="btn btn-danger">Ya, Tolak</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
-    </div>
-    @else
-    <div class="card p-6">
-        <p class="text-sm text-ink-soft">
-            Pengajuan ini sudah diputuskan sebagai <strong class="text-ink">{{ $dispensasi->status }}</strong>
-            oleh {{ $dispensasi->approver?->name ?? '-' }} pada {{ $dispensasi->approved_at?->format('d M Y, H:i') }}.
-        </p>
-        @if ($dispensasi->catatan_persetujuan)
-        <p class="text-sm text-ink mt-3"><span class="text-ink-soft">Catatan:</span> {{ $dispensasi->catatan_persetujuan }}</p>
+        </div>
+        @else
+        <div class="card p-6 text-center">
+            <i class="fas fa-circle-check text-2xl text-ink-soft mb-2"></i>
+            <p class="text-sm text-ink-soft">Pengajuan ini sudah {{ strtolower($statusLabel) }} dan tidak dapat diubah lagi.</p>
+        </div>
         @endif
     </div>
-    @endif
 </div>
 @endsection

@@ -1,14 +1,15 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DispensasiController;
 use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\DispensasiController;
 use App\Http\Controllers\PasswordChangeController;
-use App\Http\Controllers\Sdm\PegawaiController;
+use App\Http\Controllers\Sdm\DashboardController;
 use App\Http\Controllers\Sdm\DepartemenController;
 use App\Http\Controllers\Sdm\MonitoringController;
+use App\Http\Controllers\Sdm\PegawaiController;
 use App\Http\Controllers\Sdm\PegawaiImportController;
-use App\Http\Controllers\Sdm\DashboardController;
+use App\Http\Controllers\Sdm\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,13 +30,19 @@ Route::middleware('auth')->group(function () {
     })->name('notifikasi.markAllRead');
 });
 
-Route::middleware(['auth', 'role:pegawai'])->group(function () {
-    Route::get('/dashboard', fn () => view('dashboard.pegawai'))->name('dashboard.pegawai');
-
+// Admin Departemen: menginput dispensasi ATAS NAMA pegawai (KF-09) — Pegawai
+// sendiri tidak punya akun/login, jadi ini BUKAN role 'pegawai' (tidak ada
+// role itu di skema kita).
+Route::middleware(['auth', 'role:admin_departemen'])->group(function () {
     Route::get('/dispensasi/create', [DispensasiController::class, 'create'])->name('dispensasi.create');
     Route::post('/dispensasi', [DispensasiController::class, 'store'])->name('dispensasi.store');
     Route::get('/dispensasi', [DispensasiController::class, 'index'])->name('dispensasi.index');
     Route::get('/dispensasi/{dispensasi}', [DispensasiController::class, 'show'])->name('dispensasi.show');
+
+    // Alias: dashboardRoute() di User model mengarahkan admin_departemen ke sini.
+    // Riwayat dispensasi ITU dashboard-nya, sama seperti pola dashboard.manajer/
+    // dashboard.asmen di bawah — bukan halaman kosong terpisah.
+    Route::get('/admin-departemen/dashboard', [DispensasiController::class, 'index'])->name('dashboard.admin-departemen');
 });
 
 Route::middleware(['auth', 'role:manajer_departemen'])->group(function () {
@@ -61,8 +68,15 @@ Route::middleware(['auth', 'role:admin_sdm'])->prefix('sdm')->name('sdm.')->grou
     Route::post('/pegawai-import/confirm', [PegawaiImportController::class, 'confirm'])->name('pegawai.import.confirm');
 
     Route::get('/departemen', [DepartemenController::class, 'index'])->name('departemen.index');
-    
+    Route::get('/departemen/{id}', [DepartemenController::class, 'show'])->name('departemen.show');
+
     Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
     Route::get('/monitoring/export-excel', [MonitoringController::class, 'exportExcel'])->name('monitoring.export.excel');
-    Route::get('/monitoring/export-pdf', [MonitoringController::class, 'exportPdf'])->name('monitoring.export.pdf');
+    // export-pdf DIHAPUS SEMENTARA — MonitoringController::exportPdf() belum
+    // pernah kita buat. Tambahkan lagi kalau method-nya sudah ada.
+
+    // Kelola Data Pengguna — UserController yang sebelumnya belum terdaftar sama sekali.
+    Route::resource('pengguna', UserController::class)->except(['show']);
+    Route::post('/pengguna/{pengguna}/status-manajer', [UserController::class, 'updateStatusManajer'])
+        ->name('pengguna.status-manajer');
 });
