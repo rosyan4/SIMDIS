@@ -14,7 +14,6 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
-        'username',
         'email',
         'password',
         'role',
@@ -88,7 +87,7 @@ class User extends Authenticatable
     {
         $routeName = match ($this->role) {
             'admin_sdm'           => 'sdm.dashboard',
-            'admin_departemen'    => 'dispensasi.index',
+            'admin_departemen'    => 'dashboard.admin-departemen',
             'manajer_departemen'  => 'dashboard.manajer',
             'asisten_manajer'     => 'dashboard.asmen',
             default               => null,

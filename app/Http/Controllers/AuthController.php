@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -15,35 +13,32 @@ class AuthController extends Controller
     }
 
     /**
-     * KNF-01: login pakai username/NIK ATAU email. Karena dua kolom berbeda
-     * (username vs email) tidak bisa dicek sekaligus lewat Auth::attempt()
-     * biasa (itu cuma cocokkan SATU kolom persis), user dicari manual dulu
-     * baru password-nya diverifikasi dengan Hash::check().
+     * Login pakai email + password. NIK tidak dipakai untuk login akun
+     * sistem (User) — NIK adalah atribut Pegawai (data master terpisah,
+     * tidak login), bukan atribut akun User.
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'login'    => ['required', 'string'],
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('username', $request->login)
-            ->orWhere('email', $request->login)
-            ->first();
-
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors([
-                'login' => 'Username/email atau password salah.',
-            ])->onlyInput('login');
+                'email' => 'Email atau password salah.',
+            ])->onlyInput('email');
         }
+
+        $user = Auth::user();
 
         if (! $user->is_active) {
+            Auth::logout();
             return back()->withErrors([
-                'login' => 'Akun Anda tidak aktif. Hubungi Admin SDM.',
-            ])->onlyInput('login');
+                'email' => 'Akun Anda tidak aktif. Hubungi Admin SDM.',
+            ])->onlyInput('email');
         }
 
-        Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
         if ($user->must_change_password) {

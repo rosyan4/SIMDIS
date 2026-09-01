@@ -11,10 +11,11 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
 
-            // Identitas
+            // Identitas. Email jadi SATU-SATUNYA identitas login untuk User —
+            // NIK sengaja tidak disimpan di sini karena NIK adalah atribut
+            // Pegawai (tabel terpisah), bukan atribut akun login.
             $table->string('name', 100);
-            $table->string('username', 50)->unique(); // Bisa NIK atau email
-            $table->string('email', 100)->nullable()->unique();
+            $table->string('email', 100)->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
@@ -27,11 +28,6 @@ return new class extends Migration
                 'asisten_manajer',
             ]);
 
-            // Relasi ke struktur organisasi.
-            // restrictOnDelete (bukan nullOnDelete): departemens/subdepartemens adalah
-            // data master yang seharusnya tidak pernah dihapus setelah seeding. Kalau
-            // masih ada user terikat, penghapusan departemen/subdepartemen ditolak di
-            // level DB, supaya tidak ada user yang diam-diam kehilangan departemen_id-nya.
             $table->foreignId('departemen_id')->nullable()->constrained('departemens')->restrictOnDelete();
             $table->foreignId('subdepartemen_id')->nullable()->constrained('subdepartemens')->restrictOnDelete();
 
@@ -44,8 +40,6 @@ return new class extends Migration
 
             // Status akun
             $table->boolean('is_active')->default(true);
-            // Dipakai untuk memaksa ganti password saat login pertama kali
-            // (akun baru dari seeder/import selalu punya password default).
             $table->boolean('must_change_password')->default(false);
 
             $table->timestamps();

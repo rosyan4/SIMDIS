@@ -15,13 +15,12 @@ class StoreUserRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('user')?->id;
+        $userId = $this->route('pengguna')?->id;
         $role = $this->input('role');
 
         return [
-            'name'     => ['required', 'string', 'max:100'],
-            'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($userId)],
-            'email'    => ['nullable', 'email', 'max:100', Rule::unique('users', 'email')->ignore($userId)],
+            'name'  => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($userId)],
 
             // Password wajib saat create, opsional saat update (kosong = tidak diganti)
             'password' => [$this->isMethod('post') ? 'required' : 'nullable', 'string', 'min:8', 'confirmed'],
@@ -57,11 +56,7 @@ class StoreUserRequest extends FormRequest
                 },
             ],
 
-            'status_manajer' => ['nullable', Rule::in(['aktif', 'berhalangan'])],
-            'tanggal_mulai_berhalangan'   => ['nullable', 'date'],
-            'tanggal_selesai_berhalangan' => ['nullable', 'date', 'after_or_equal:tanggal_mulai_berhalangan'],
-            'alasan_berhalangan'          => ['nullable', 'string', 'max:200'],
-            'keterangan_tambahan'         => ['nullable', 'string'],
+            'keterangan_tambahan' => ['nullable', 'string'],
 
             'is_active' => ['sometimes', 'boolean'],
         ];
@@ -72,7 +67,7 @@ class StoreUserRequest extends FormRequest
         $validator->after(function ($validator) {
             $role = $this->input('role');
             $departemenId = $this->input('departemen_id');
-            $userId = $this->route('user')?->id;
+            $userId = $this->route('pengguna')?->id;
 
             // Aturan yang sama untuk manajer_departemen: 1 manajer aktif per departemen.
             // Ditaruh di withValidator (bukan rule closure di atas) karena field yang

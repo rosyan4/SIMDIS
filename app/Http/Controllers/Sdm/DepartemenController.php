@@ -23,19 +23,19 @@ class DepartemenController extends Controller
         // Query departemen dengan relasi
         $query = Departemen::with([
             'manajerAktif' => function ($query) {
-                $query->select('id', 'name', 'username', 'departemen_id', 'is_active', 'status_manajer');
+                $query->select('id', 'name', 'email', 'departemen_id', 'is_active', 'status_manajer');
             },
             'manajers' => function ($query) {
-                $query->select('id', 'name', 'username', 'departemen_id', 'is_active', 'status_manajer');
+                $query->select('id', 'name', 'email', 'departemen_id', 'is_active', 'status_manajer');
             },
             'subdepartemens' => function ($query) {
                 $query->orderBy('nama_subdepartemen');
             },
             'subdepartemens.asistenManajerAktif' => function ($query) {
-                $query->select('id', 'name', 'username', 'subdepartemen_id', 'is_active');
+                $query->select('id', 'name', 'email', 'subdepartemen_id', 'is_active');
             },
             'subdepartemens.asistenManajers' => function ($query) {
-                $query->select('id', 'name', 'username', 'subdepartemen_id', 'is_active');
+                $query->select('id', 'name', 'email', 'subdepartemen_id', 'is_active');
             },
             'pegawais' => function ($query) {
                 $query->where('status', 'aktif')->select('id', 'nama_pegawai', 'departemen_id');
@@ -88,7 +88,7 @@ class DepartemenController extends Controller
                 $query->where('status', 'aktif')->orderBy('nama_pegawai');
             },
             'adminDepartemens' => function ($query) {
-                $query->where('is_active', true)->select('id', 'name', 'username', 'departemen_id');
+                $query->where('is_active', true)->select('id', 'name', 'email', 'departemen_id');
             },
         ])->findOrFail($id);
 

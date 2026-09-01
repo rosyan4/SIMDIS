@@ -54,8 +54,12 @@
 
         <div>
             <label class="field-label" for="jabatan">Jabatan</label>
-            <input type="text" id="jabatan" name="jabatan" class="field-input"
-                   value="{{ old('jabatan', $pegawai->jabatan) }}" required maxlength="100">
+            <select id="jabatan" name="jabatan" class="field-input" required>
+                <option value="">— Pilih Jabatan —</option>
+                @foreach (\App\Http\Requests\StorePegawaiRequest::PILIHAN_JABATAN as $j)
+                <option value="{{ $j }}" @selected(old('jabatan', $pegawai->jabatan) === $j)>{{ $j }}</option>
+                @endforeach
+            </select>
             @error('jabatan') <p class="field-error">{{ $message }}</p> @enderror
         </div>
     </div>

@@ -16,6 +16,14 @@ class PegawaiController extends Controller
      * Departemen / Manajer Departemen / Asisten Manajer / Admin SDM)
      * dikelola lewat User & controller "Kelola Data Pengguna" terpisah.
      */
+    /**
+     * Ditampilkan dikelompokkan per departemen (accordion), bukan tabel
+     * datar dengan pagination — supaya Admin SDM langsung lihat sebaran
+     * pegawai per unit tanpa harus filter satu-satu. Konsekuensinya:
+     * TIDAK ada pagination di sini (paginate per baris pegawai tidak cocok
+     * dengan tampilan berkelompok). Kalau jumlah pegawai sudah sangat besar
+     * (ribuan), ini perlu dioptimasi lagi (mis. lazy-load per departemen).
+     */
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -39,11 +47,28 @@ class PegawaiController extends Controller
             $query->where('status', $status);
         }
 
-        $pegawais = $query->orderBy('nama_pegawai')->paginate(20)->withQueryString();
+        $pegawaiPerDepartemen = $query->orderBy('nama_pegawai')->get()->groupBy('departemen_id');
 
         $departemens = Departemen::orderBy('nama_departemen')->get();
 
-        return view('sdm.pegawai.index', compact('pegawais', 'departemens', 'search', 'departemenId', 'status'));
+        // Kalau lagi search/filter, departemen yang tidak punya hasil sama
+        // sekali disembunyikan (mengurangi noise). Kalau tanpa filter, semua
+        // departemen tetap ditampilkan (termasuk yang 0 pegawai) supaya
+        // Admin SDM bisa lihat cakupan penuh organisasi.
+        $adaFilterAktif = (bool) ($search || $departemenId || $status);
+        if ($adaFilterAktif) {
+            $departemens = $departemens->filter(
+                fn ($d) => $pegawaiPerDepartemen->get($d->id, collect())->isNotEmpty()
+            );
+        }
+
+        return view('sdm.pegawai.index', compact(
+            'pegawaiPerDepartemen',
+            'departemens',
+            'search',
+            'departemenId',
+            'status'
+        ));
     }
 
     public function create()

@@ -32,7 +32,6 @@ class UserSeeder extends Seeder
             // 1. Admin SDM — tidak terikat departemen/subdepartemen manapun
             User::create([
                 'name'                  => 'Admin SDM',
-                'username'              => 'admin.sdm',
                 'email'                 => 'adminsdm@tirtamayang.co.id',
                 'password'              => $defaultPassword,
                 'role'                  => 'admin_sdm',
@@ -48,7 +47,6 @@ class UserSeeder extends Seeder
 
                 User::create([
                     'name'                  => "Admin Departemen {$departemen->nama_departemen}",
-                    'username'              => "admin.dept.{$slug}",
                     'email'                 => "admindept.{$slug}@tirtamayang.co.id",
                     'password'              => $defaultPassword,
                     'role'                  => 'admin_departemen',
@@ -60,7 +58,6 @@ class UserSeeder extends Seeder
 
                 User::create([
                     'name'                  => "Manajer {$departemen->nama_departemen}",
-                    'username'              => "manajer.{$slug}",
                     'email'                 => "manajer.{$slug}@tirtamayang.co.id",
                     'password'              => $defaultPassword,
                     'role'                  => 'manajer_departemen',
@@ -78,7 +75,6 @@ class UserSeeder extends Seeder
 
                 User::create([
                     'name'                  => "Asisten Manajer {$subdepartemen->nama_subdepartemen}",
-                    'username'              => "asmen.{$slug}",
                     'email'                 => "asmen.{$slug}@tirtamayang.co.id",
                     'password'              => $defaultPassword,
                     'role'                  => 'asisten_manajer',

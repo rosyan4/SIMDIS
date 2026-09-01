@@ -54,7 +54,7 @@
             <div class="flex items-center gap-2 text-sm">
                 <i class="fas fa-user-shield text-ink-soft w-4"></i>
                 <span class="text-ink">{{ $admin->name }}</span>
-                <span class="text-ink-soft text-xs">({{ $admin->username }})</span>
+                <span class="text-ink-soft text-xs">({{ $admin->email }})</span>
             </div>
             @endforeach
         </div>

@@ -649,32 +649,18 @@
                             class="mobile-logo">
                     @endif
 
-                    <h1>Masuk ke Akun</h1>
+                    <h1>Masuk</h1>
 
-                    <p>
-                        Gunakan NIK atau email yang terdaftar untuk melanjutkan
-                    </p>
+                    <p>Login pakai email dan password akun Anda.</p>
 
                 </div>
 
-                {{-- ==================== FLASH MESSAGES ==================== --}}
+                {{-- ==================== FLASH / ERROR MESSAGE ====================
+                     Logika disamakan dengan versi sebelumnya: satu blok error
+                     tunggal yang menampilkan $errors->first(), tanpa memecah
+                     berdasarkan nama field tertentu. --}}
 
-                @if (session('success'))
-                    <div class="alert alert-success" role="status">
-                        <i class="fas fa-circle-check" aria-hidden="true"></i>
-                        {{ session('success') }}
-                    </div>
-                @endif
-
-                @if (session('info'))
-                    <div class="alert alert-info" role="status">
-                        <i class="fas fa-circle-info" aria-hidden="true"></i>
-                        {{ session('info') }}
-                    </div>
-                @endif
-
-                {{-- Error umum (di luar field login/password) --}}
-                @if ($errors->any() && !$errors->has('login') && !$errors->has('password'))
+                @if ($errors->any())
                     <div class="alert alert-error" role="alert">
                         <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
                         {{ $errors->first() }}
@@ -683,39 +669,29 @@
 
                 {{-- ==================== FORM LOGIN ==================== --}}
 
-                <form action="{{ route('login') }}" method="POST" novalidate>
+                <form action="{{ route('login') }}" method="POST">
                     @csrf
 
-                    {{-- NIK / Email --}}
+                    {{-- Email --}}
                     <div class="form-group">
 
-                        <label for="login">NIK / Email</label>
+                        <label for="email">Email</label>
 
                         <div class="input-wrap no-toggle">
 
-                            <i class="fas fa-user icon-left" aria-hidden="true"></i>
+                            <i class="fas fa-envelope icon-left" aria-hidden="true"></i>
 
                             <input
-                                type="text"
-                                id="login"
-                                name="login"
-                                class="{{ $errors->has('login') ? 'is-invalid' : '' }}"
-                                placeholder="Masukkan NIK atau email Anda"
-                                value="{{ old('login') }}"
-                                autocomplete="username"
+                                type="email"
+                                id="email"
+                                name="email"
+                                class="{{ $errors->has('email') ? 'is-invalid' : '' }}"
+                                value="{{ old('email') }}"
                                 required
-                                aria-required="true"
-                                @error('login') aria-invalid="true" aria-describedby="login-error" @enderror
-                                autofocus>
+                                autofocus
+                                autocomplete="username">
 
                         </div>
-
-                        @error('login')
-                            <p class="error-msg" id="login-error">
-                                <i class="fas fa-circle-xmark" aria-hidden="true"></i>
-                                {{ $message }}
-                            </p>
-                        @enderror
 
                     </div>
 
@@ -733,11 +709,8 @@
                                 id="password"
                                 name="password"
                                 class="{{ $errors->has('password') ? 'is-invalid' : '' }}"
-                                placeholder="Masukkan password Anda"
-                                autocomplete="current-password"
                                 required
-                                aria-required="true"
-                                @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
+                                autocomplete="current-password">
 
                             <button
                                 type="button"
@@ -756,13 +729,6 @@
 
                         </div>
 
-                        @error('password')
-                            <p class="error-msg" id="password-error">
-                                <i class="fas fa-circle-xmark" aria-hidden="true"></i>
-                                {{ $message }}
-                            </p>
-                        @enderror
-
                     </div>
 
                     {{-- Remember me --}}
@@ -772,6 +738,7 @@
                             <input
                                 type="checkbox"
                                 name="remember"
+                                value="1"
                                 @checked(old('remember'))>
 
                             Ingat saya
@@ -786,11 +753,6 @@
                     </button>
 
                 </form>
-
-                <div class="note">
-                    Lupa password atau ada kendala saat login?
-                    Hubungi Divisi SDM untuk dibantu.
-                </div>
 
             </div>
 
@@ -810,12 +772,6 @@
             btn.setAttribute('aria-pressed', String(showing));
             btn.setAttribute('aria-label', showing ? 'Sembunyikan password' : 'Tampilkan password');
         }
-
-        // Cegah tombol kembali menampilkan halaman aplikasi setelah logout.
-        history.pushState(null, null, location.href);
-        window.addEventListener('popstate', function () {
-            history.pushState(null, null, location.href);
-        });
 
         // Cegah pengiriman ganda saat form login disubmit.
         document.querySelector('form').addEventListener('submit', function () {
