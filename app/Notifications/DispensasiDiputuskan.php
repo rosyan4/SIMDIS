@@ -19,13 +19,13 @@ class DispensasiDiputuskan extends Notification
 
     public function toArray($notifiable): array
     {
-        $status = $this->dispensasi->status === 'disetujui' ? 'disetujui' : 'ditolak';
+        $status = $this->dispensasi->status_pengajuan === 'disetujui' ? 'disetujui' : 'ditolak';
 
         return [
             'dispensasi_id' => $this->dispensasi->id,
             'nomor_dispensasi' => $this->dispensasi->nomor_dispensasi,
             'pesan' => "Pengajuan dispensasi {$this->dispensasi->nomor_dispensasi} Anda telah {$status}.",
-            'url' => '/dispensasi/' . $this->dispensasi->id,
+            'url' => route('dispensasi.show', $this->dispensasi),
         ];
     }
 }

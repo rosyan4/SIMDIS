@@ -22,36 +22,36 @@
 
 {{-- Filter --}}
 <form method="GET" class="card p-4 mb-6 flex gap-3 flex-wrap items-end">
-    <div>
+    <div class="flex-1 min-w-[140px]">
         <label class="text-xs text-ink-soft mb-1 block">Tahun</label>
-        <select name="tahun" class="field-input" style="width:auto">
+        <select name="tahun" class="field-input">
             <option value="">Semua Tahun</option>
             @foreach ($tahunTersedia as $t)
             <option value="{{ $t }}" @selected($tahun == $t)>{{ $t }}</option>
             @endforeach
         </select>
     </div>
-    <div>
+    <div class="flex-1 min-w-[140px]">
         <label class="text-xs text-ink-soft mb-1 block">Bulan</label>
-        <select name="bulan" class="field-input" style="width:auto">
+        <select name="bulan" class="field-input">
             <option value="">Semua Bulan</option>
             @foreach ($namaBulan as $angka => $nama)
             <option value="{{ $angka }}" @selected($bulan == $angka)>{{ $nama }}</option>
             @endforeach
         </select>
     </div>
-    <div>
+    <div class="flex-1 min-w-[180px]">
         <label class="text-xs text-ink-soft mb-1 block">Departemen</label>
-        <select name="departemen_id" class="field-input" style="width:auto">
+        <select name="departemen_id" class="field-input">
             <option value="">Semua Departemen</option>
             @foreach ($departemens as $d)
             <option value="{{ $d->id }}" @selected($departemenId == $d->id)>{{ $d->nama_departemen }}</option>
             @endforeach
         </select>
     </div>
-    <div>
+    <div class="flex-1 min-w-[180px]">
         <label class="text-xs text-ink-soft mb-1 block">Status</label>
-        <select name="status" class="field-input" style="width:auto">
+        <select name="status" class="field-input">
             <option value="">Semua Status</option>
             <option value="menunggu_persetujuan" @selected($status === 'menunggu_persetujuan')>Menunggu Persetujuan</option>
             <option value="disetujui" @selected($status === 'disetujui')>Disetujui</option>
@@ -92,7 +92,7 @@
                     'ditolak' => 'badge-ditolak',
                     default => 'badge-default',
                 };
-                $waktuLabel = ['pagi' => 'Pagi', 'istirahat' => 'Istirahat', 'siang' => 'Siang', 'sore' => 'Sore'][$d->waktu_dispensasi] ?? $d->waktu_dispensasi;
+                $waktuLabel = $d->waktu_dispensasi;
             @endphp
             <tr>
                 <td class="mono-data text-ink-soft">{{ $d->nomor_dispensasi }}</td>
@@ -121,6 +121,12 @@
 </div>
 
 @if ($dispensasis->isNotEmpty())
-<p class="text-xs text-ink-soft mt-3">Menampilkan {{ $dispensasis->count() }} data.</p>
+<div class="flex items-center justify-between flex-wrap gap-3 mt-3">
+    <p class="text-xs text-ink-soft">
+        Menampilkan {{ $dispensasis->firstItem() }}–{{ $dispensasis->lastItem() }}
+        dari {{ $dispensasis->total() }} data.
+    </p>
+    {{ $dispensasis->links() }}
+</div>
 @endif
 @endsection

@@ -8,6 +8,7 @@ use App\Models\Departemen;
 use App\Models\Dispensasi;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class MonitoringController extends Controller
@@ -23,12 +24,13 @@ class MonitoringController extends Controller
         $tahun = $request->input('tahun');
         $bulan = $request->input('bulan');
         $departemenId = $request->input('departemen_id');
-        $status = $request->input('status');   // ← baris ini yang kemungkinan hilang
+        $status = $request->input('status');
 
         $dispensasis = $this->filteredQuery($tahun, $bulan, $departemenId, $status)
             ->with(['pegawai', 'departemen', 'subdepartemen', 'diprosesOleh'])
             ->orderByDesc('tanggal_dispensasi')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('sdm.monitoring.index', [
             'dispensasis' => $dispensasis,
@@ -38,7 +40,7 @@ class MonitoringController extends Controller
             'tahun' => $tahun,
             'bulan' => $bulan,
             'departemenId' => $departemenId,
-            'status' => $status,               // ← dan ini
+            'status' => $status,
         ]);
     }
 
@@ -48,10 +50,21 @@ class MonitoringController extends Controller
         $bulan = $request->input('bulan');
         $departemenId = $request->input('departemen_id');
 
-        $namaFile = 'laporan-dispensasi'
-            . ($tahun ? '-' . $tahun : '')
-            . ($bulan ? '-' . self::NAMA_BULAN[$bulan] : '')
-            . '-' . now()->format('His') . '.xlsx';
+        $namaDepartemen = $departemenId
+            ? (Departemen::find($departemenId)?->nama_departemen ?? 'Departemen')
+            : 'Semua Departemen';
+
+        $bagianNamaFile = [Str::slug($namaDepartemen)];
+
+        if ($bulan && isset(self::NAMA_BULAN[$bulan])) {
+            $bagianNamaFile[] = Str::slug(self::NAMA_BULAN[$bulan]);
+        }
+
+        if ($tahun) {
+            $bagianNamaFile[] = $tahun;
+        }
+
+        $namaFile = implode('-', $bagianNamaFile) . '.xlsx';
 
         return Excel::download(
             new DispensasiExport($tahun, $bulan, $departemenId, self::NAMA_BULAN),
@@ -59,33 +72,47 @@ class MonitoringController extends Controller
         );
     }
 
-    private function filteredQuery(?string $tahun, ?string $bulan, ?string $departemenId): Builder
+    private function filteredQuery(?string $tahun, ?string $bulan, ?string $departemenId, ?string $status): Builder
     {
-        // KF-23: Admin SDM export data dispensasi yang SUDAH DISETUJUI saja.
-        $query = Dispensasi::where('status_pengajuan', 'disetujui');
+        $query = Dispensasi::query();
 
         if ($tahun) {
             $query->whereYear('tanggal_dispensasi', $tahun);
         }
-
         if ($bulan) {
             $query->whereMonth('tanggal_dispensasi', $bulan);
         }
-
         if ($departemenId) {
-            // dispensasis.departemen_id adalah snapshot langsung di tabel dispensasi
-            // (bukan lewat pegawai->subdepartemen->departemen), jadi cukup where
-            // biasa — tidak perlu whereHas + join berlapis seperti versi sebelumnya.
             $query->where('departemen_id', $departemenId);
+        }
+        if ($status && in_array($status, ['menunggu_persetujuan', 'disetujui', 'ditolak'], true)) {
+            $query->where('status_pengajuan', $status);
         }
 
         return $query;
     }
 
-    private function tahunTersedia()
+    /**
+     * Daftar tahun yang tersedia di database + tahun sekarang (kalau belum
+     * ada data di tahun berjalan, tetap ditampilkan supaya admin bisa
+     * langsung filter ke tahun ini). Konsisten dengan
+     * DashboardController::getTahunTersedia().
+     */
+    private function tahunTersedia(): array
     {
-        return Dispensasi::selectRaw('DISTINCT YEAR(tanggal_dispensasi) as tahun')
+        $tahun = Dispensasi::selectRaw('DISTINCT YEAR(tanggal_dispensasi) as tahun')
             ->orderByDesc('tahun')
-            ->pluck('tahun');
+            ->pluck('tahun')
+            ->map(fn ($t) => (int) $t)
+            ->toArray();
+
+        $tahunSekarang = now()->year;
+
+        if (! in_array($tahunSekarang, $tahun, true)) {
+            $tahun[] = $tahunSekarang;
+            rsort($tahun);
+        }
+
+        return $tahun;
     }
 }

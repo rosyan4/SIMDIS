@@ -1,70 +1,160 @@
 @extends('layouts.app')
-@section('title', 'Struktur Departemen')
-@section('page-title', 'Struktur Departemen')
+@section('title', 'Kelola Pengguna')
+@section('page-title', 'Kelola Pengguna')
 
 @section('content')
-<div class="mb-8">
-    <p class="text-xs font-semibold tracking-widest text-accent uppercase mb-1">Admin SDM</p>
-    <h1 class="font-display text-3xl text-ink">Struktur Departemen</h1>
-    <p class="text-sm text-ink-soft mt-1">Data master — hanya dapat dilihat, tidak bisa diubah dari sini.</p>
+<div class="flex items-start justify-between gap-4 mb-8 flex-wrap">
+    <div>
+        <p class="text-xs font-semibold tracking-widest text-accent uppercase mb-1">Admin SDM</p>
+        <h1 class="font-display text-3xl text-ink">Kelola Pengguna</h1>
+    </div>
+    <a href="{{ route('sdm.pengguna.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Tambah Pengguna
+    </a>
 </div>
 
 @php
-    // Statistik dari controller berupa array datar, dikelompokkan ulang di sini
-    // berdasarkan departemen_id supaya gampang dicocokkan per kartu departemen.
-    $statistikByDept = collect($statistik)->keyBy('departemen_id');
+    // Label tampilan untuk tiap role. Daftar role itu sendiri diambil dari
+    // StoreUserRequest::ROLE_TERSEDIA (public const) supaya satu sumber
+    // kebenaran dengan validasi — bukan disalin manual di sini.
+    $semuaLabel = [
+        'admin_sdm'                      => 'Admin SDM',
+        'admin_departemen'               => 'Admin Departemen',
+        'manajer_departemen'             => 'Manajer Departemen',
+        'senior_manajer_sekper'          => 'Senior Manajer Sekretaris Perusahaan',
+        'kepala_spi'                     => 'Kepala SPI',
+        'direktur_teknik'                => 'Direktur Teknik',
+        'direktur_administrasi_keuangan' => 'Direktur Administrasi & Keuangan',
+        'direktur_utama'                 => 'Direktur Utama',
+    ];
+    $roleLabels = collect(\App\Http\Requests\StoreUserRequest::ROLE_TERSEDIA)
+        ->mapWithKeys(fn ($r) => [$r => $semuaLabel[$r] ?? $r]);
 @endphp
 
 {{-- Filter --}}
 <form method="GET" class="card p-4 mb-6 flex gap-3 flex-wrap items-end">
     <div class="flex-1 min-w-[200px]">
-        <label class="text-xs text-ink-soft mb-1 block">Cari (Kode / Nama)</label>
-        <input type="text" name="search" value="{{ $search }}" class="field-input" placeholder="Ketik kode atau nama departemen...">
+        <label class="text-xs text-ink-soft mb-1 block">Cari (Nama / Email)</label>
+        <input type="text" name="search" value="{{ $search }}" class="field-input" placeholder="Ketik nama atau email...">
     </div>
-    <button class="btn btn-primary">Cari</button>
-    @if ($search || $filterDepartemen)
-    <a href="{{ route('sdm.departemen.index') }}" class="btn btn-outline">Reset</a>
+    <div class="flex-1 min-w-[220px]">
+        <label class="text-xs text-ink-soft mb-1 block">Role</label>
+        <select name="role" class="field-input">
+            <option value="">Semua Role</option>
+            @foreach ($roleLabels as $val => $label)
+            <option value="{{ $val }}" @selected($role === $val)>{{ $label }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div class="flex-1 min-w-[180px]">
+        <label class="text-xs text-ink-soft mb-1 block">Departemen</label>
+        <select name="departemen_id" class="field-input">
+            <option value="">Semua Departemen</option>
+            @foreach ($departemens as $d)
+            <option value="{{ $d->id }}" @selected($departemenId == $d->id)>{{ $d->nama_departemen }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div class="flex-1 min-w-[140px]">
+        <label class="text-xs text-ink-soft mb-1 block">Status</label>
+        <select name="status" class="field-input">
+            <option value="">Semua Status</option>
+            <option value="aktif" @selected($status === 'aktif')>Aktif</option>
+            <option value="nonaktif" @selected($status === 'nonaktif')>Nonaktif</option>
+        </select>
+    </div>
+    <button class="btn btn-primary">Terapkan</button>
+    @if ($search || $role || $departemenId || $status)
+    <a href="{{ route('sdm.pengguna.index') }}" class="btn btn-outline">Reset</a>
     @endif
 </form>
 
-<div class="grid md:grid-cols-2 gap-4">
-    @forelse ($departemens as $d)
-    @php $s = $statistikByDept->get($d->id); @endphp
-    <a href="{{ route('sdm.departemen.show', $d->id) }}" class="card p-5 hover:border-accent transition-colors block">
-        <div class="flex items-start justify-between gap-3 mb-3">
-            <div>
-                <p class="text-[11px] font-mono text-ink-soft mb-0.5">{{ $d->kode_departemen }}</p>
-                <h3 class="font-display text-lg text-ink leading-snug">{{ $d->nama_departemen }}</h3>
-            </div>
-            @if ($d->manajerAktif)
-            <span class="badge badge-disetujui shrink-0">Manajer Aktif</span>
-            @else
-            <span class="badge badge-menunggu shrink-0">Belum Ada Manajer</span>
-            @endif
-        </div>
+<div class="table-scroll-wrapper">
+    <table class="table-pro">
+        <thead>
+            <tr>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Departemen</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($users as $u)
+            <tr>
+                <td class="font-medium">{{ $u->name }}</td>
+                <td class="text-ink-soft">{{ $u->email }}</td>
+                <td>{{ $roleLabels[$u->role] ?? $u->role }}</td>
+                <td class="text-ink-soft">{{ $u->departemen?->nama_departemen ?? '-' }}</td>
+                <td>
+                    <span class="badge {{ $u->is_active ? 'badge-disetujui' : 'badge-default' }}">
+                        {{ $u->is_active ? 'Aktif' : 'Nonaktif' }}
+                    </span>
+                </td>
+                <td class="text-right whitespace-nowrap">
+                    <a href="{{ route('sdm.pengguna.edit', $u) }}" class="btn btn-sm btn-outline">
+                        <i class="fas fa-pen"></i>
+                    </a>
+                    @if ($u->is_active)
+                    <div class="inline-block" x-data="{ confirmOpen: false }">
+                        <form id="nonaktifkan-pengguna-{{ $u->id }}" method="POST" action="{{ route('sdm.pengguna.destroy', $u) }}" class="hidden">
+                            @csrf
+                            @method('DELETE')
+                        </form>
 
-        <div class="flex items-center gap-2 text-sm text-ink-soft mb-4">
-            <i class="fas fa-user-tie w-4"></i>
-            <span>{{ $d->manajerAktif?->name ?? 'Belum ditugaskan' }}</span>
-        </div>
+                        <button type="button" @click="confirmOpen = true" class="btn btn-sm btn-danger">
+                            <i class="fas fa-ban"></i>
+                        </button>
 
-        <div class="grid grid-cols-3 gap-2 text-center border-t border-line pt-3">
-            <div>
-                <p class="font-display text-lg text-ink mono-data">{{ $s['pegawai_aktif'] ?? 0 }}</p>
-                <p class="text-[11px] text-ink-soft">Pegawai Aktif</p>
-            </div>
-            <div>
-                <p class="font-display text-lg text-ink mono-data">{{ $s['total_subdepartemen'] ?? 0 }}</p>
-                <p class="text-[11px] text-ink-soft">Subdepartemen</p>
-            </div>
-            <div>
-                <p class="font-display text-lg text-ink mono-data">{{ $d->subdepartemens->filter(fn ($sub) => $sub->asistenManajerAktif)->count() }}</p>
-                <p class="text-[11px] text-ink-soft">Asmen Aktif</p>
-            </div>
-        </div>
-    </a>
-    @empty
-    <div class="card p-10 text-center text-ink-soft md:col-span-2">Tidak ada departemen sesuai pencarian.</div>
-    @endforelse
+                        {{-- Diteleport ke <body> — sama seperti modal logout di layout,
+                             supaya tidak ikut kepotong/salah posisi kalau nanti dipakai
+                             di dalam elemen yang ada transform/overflow (mis. wrapper tabel). --}}
+                        <template x-teleport="body">
+                            <div x-show="confirmOpen" x-cloak
+                                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                 class="fixed inset-0 z-[300] flex items-center justify-center p-4"
+                                 style="background: rgba(15,23,42,.48); backdrop-filter: blur(2px);">
+                                <div @click.outside="confirmOpen = false"
+                                     x-show="confirmOpen"
+                                     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                     class="card w-full max-w-sm p-6 text-center">
+                                    <div class="h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-3" style="background: #FCEACB; color:#9A6011;">
+                                        <i class="fas fa-user-slash"></i>
+                                    </div>
+                                    <h3 class="font-bold text-ink mb-1">Nonaktifkan {{ $u->name }}?</h3>
+                                    <p class="text-sm text-ink-soft mb-5">Akun ini tidak akan bisa login sampai diaktifkan kembali oleh Admin SDM.</p>
+                                    <div class="flex gap-2 justify-center">
+                                        <button type="button" @click="confirmOpen = false" class="btn btn-outline">Batal</button>
+                                        <button type="submit" form="nonaktifkan-pengguna-{{ $u->id }}" class="btn" style="background:#C8862B; color:#fff;" onmouseover="this.style.background='#a56c1f'" onmouseout="this.style.background='#C8862B'">Ya, Nonaktifkan</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    @endif
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="6" class="text-center text-ink-soft py-12">
+                    <i class="fas fa-magnifying-glass text-2xl mb-2 block"></i>
+                    Tidak ada pengguna yang cocok dengan filter/pencarian.
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
 </div>
+
+@if ($users->isNotEmpty())
+<div class="flex items-center justify-between flex-wrap gap-3 mt-3">
+    <p class="text-xs text-ink-soft">
+        Menampilkan {{ $users->firstItem() }}–{{ $users->lastItem() }}
+        dari {{ $users->total() }} pengguna.
+    </p>
+    {{ $users->links() }}
+</div>
+@endif
 @endsection

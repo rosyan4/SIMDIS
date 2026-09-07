@@ -568,7 +568,7 @@
 
                     <span class="eyebrow"><i class="fas fa-shield-halved" aria-hidden="true"></i> Portal Internal Pegawai</span>
 
-                    <h2>Sistem Informasi Dispensasi</h2>
+                    <h2>Sistem Informasi Dispensasi Pegawai</h2>
 
                     <p>
                         Dulu urus izin dispensasi harus ke HRD dan isi formulir kertas.

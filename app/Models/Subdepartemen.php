@@ -28,30 +28,15 @@ class Subdepartemen extends Model
         return $this->hasMany(Pegawai::class);
     }
 
-    public function users(): HasMany
-    {
-        return $this->hasMany(User::class);
-    }
-
     public function dispensasis(): HasMany
     {
         return $this->hasMany(Dispensasi::class);
     }
 
-    /**
-     * Asisten Manajer yang sedang aktif untuk subdepartemen ini (bagian 4 dokumen).
-     * Sama seperti Departemen::manajerAktif() — "hanya 1 asisten manajer aktif per
-     * subdepartemen" perlu divalidasi di FormRequest, bukan hanya diasumsikan lewat hasOne().
-     */
     public function asistenManajerAktif(): HasOne
     {
-        return $this->hasOne(User::class)
-                    ->where('role', 'asisten_manajer')
-                    ->where('is_active', true);
-    }
-
-    public function asistenManajers(): HasMany
-    {
-        return $this->hasMany(User::class)->where('role', 'asisten_manajer');
+        return $this->hasOne(Pegawai::class)
+            ->where('posisi', 'asisten_manajer_bidang')
+            ->where('status', 'aktif');
     }
 }

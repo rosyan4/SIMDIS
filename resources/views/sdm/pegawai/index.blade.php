@@ -10,7 +10,7 @@
     </div>
     <div class="flex gap-2">
         <a href="{{ route('sdm.pegawai.import.form') }}" class="btn btn-outline">
-            <i class="fas fa-file-import"></i> Import Excel
+            <i class="fas fa-file-import"></i> Import
         </a>
         <a href="{{ route('sdm.pegawai.create') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Tambah Pegawai
@@ -24,18 +24,18 @@
         <label class="text-xs text-ink-soft mb-1 block">Cari (NIK / Nama)</label>
         <input type="text" name="search" value="{{ $search }}" class="field-input" placeholder="Ketik NIK atau nama...">
     </div>
-    <div>
+    <div class="flex-1 min-w-[180px]">
         <label class="text-xs text-ink-soft mb-1 block">Departemen</label>
-        <select name="departemen_id" class="field-input" style="width:auto">
+        <select name="departemen_id" class="field-input">
             <option value="">Semua Departemen</option>
             @foreach (\App\Models\Departemen::orderBy('nama_departemen')->get() as $d)
             <option value="{{ $d->id }}" @selected($departemenId == $d->id)>{{ $d->nama_departemen }}</option>
             @endforeach
         </select>
     </div>
-    <div>
+    <div class="flex-1 min-w-[140px]">
         <label class="text-xs text-ink-soft mb-1 block">Status</label>
-        <select name="status" class="field-input" style="width:auto">
+        <select name="status" class="field-input">
             <option value="">Semua Status</option>
             <option value="aktif" @selected($status === 'aktif')>Aktif</option>
             <option value="nonaktif" @selected($status === 'nonaktif')>Nonaktif</option>

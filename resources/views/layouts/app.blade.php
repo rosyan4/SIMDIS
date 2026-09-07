@@ -236,7 +236,9 @@
     </style>
 
     <script>
-        document.addEventListener('submit', function (e) {
+       document.addEventListener('submit', function (e) {
+            if (e.defaultPrevented) return;
+
             const form = e.target;
             if (!(form instanceof HTMLFormElement)) return;
             if (form.dataset.submitted === 'true') { e.preventDefault(); return; }
@@ -246,7 +248,7 @@
                 btn.dataset.originalText = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Memproses...';
             });
-        }, true);
+        }, false);
     </script>
     @stack('styles')
 </head>
@@ -256,9 +258,21 @@
 
 @auth
     @php
-        // dashboardRoute() ada di App\Models\User — arahnya beda per role
-        // (lihat method dashboardRoute() yang baru ditambahkan).
+        // dashboardRoute() ada di App\Models\User — arahnya beda per role.
         $dashboardUrl = auth()->user()->dashboardRoute();
+
+        // Route-route dashboard untuk 6 role pemberi keputusan — semua sekarang
+        // mengarah ke ApprovalController@index yang sama (lihat routes/web.php).
+        // Dipakai bareng supaya menu "Persetujuan" tidak perlu 6 blok @if terpisah.
+        $rutePersetujuan = [
+            'dashboard.manajer',
+            'dashboard.senior-manajer-sekper',
+            'dashboard.kepala-spi',
+            'dashboard.direktur-teknik',
+            'dashboard.direktur-administrasi-keuangan',
+            'dashboard.direktur-utama',
+            'approval.*',
+        ];
     @endphp
 
     {{-- ══════════════════════════════════════
@@ -299,33 +313,21 @@
             <i class="fas fa-gauge-high"></i><span>Dashboard</span>
         </a>
         @endif
-
-            {{-- Input Pengajuan Dispensasi (KF-09): dilakukan oleh Admin Departemen
-                 ATAS NAMA pegawai — Pegawai sendiri tidak punya akun login,
-                 jadi bukan role 'pegawai' (role itu tidak ada di skema). --}}
+            
             @if (auth()->user()->isAdminDepartemen() && Route::has('dispensasi.index'))
-            <a href="{{ route('dispensasi.index') }}" class="nav-link {{ request()->routeIs('dispensasi.index') ? 'active' : '' }}">
+            <a href="{{ route('dispensasi.index') }}" class="nav-link {{ request()->routeIs(['dispensasi.index', 'dispensasi.show']) ? 'active' : '' }}">
                 <i class="fas fa-file-lines"></i><span>Riwayat Dispensasi</span>
             </a>
             @endif
-
+            
             @if (auth()->user()->isAdminDepartemen() && Route::has('dispensasi.create'))
             <a href="{{ route('dispensasi.create') }}" class="nav-link {{ request()->routeIs('dispensasi.create') ? 'active' : '' }}">
                 <i class="fas fa-file-circle-plus"></i><span>Ajukan Dispensasi</span>
             </a>
             @endif
 
-            {{-- Persetujuan ADALAH dashboard Manajer Departemen / Asisten Manajer
-                 (ApprovalController@indexManajer / indexAsmen) — bukan route
-                 terpisah bernama 'persetujuan.index'. --}}
-            @if (auth()->user()->isManajerDepartemen() && Route::has('dashboard.manajer'))
-            <a href="{{ route('dashboard.manajer') }}" class="nav-link {{ request()->routeIs('dashboard.manajer') || request()->routeIs('approval.*') ? 'active' : '' }}">
-                <i class="fas fa-square-check"></i><span>Persetujuan</span>
-            </a>
-            @endif
-
-            @if (auth()->user()->isAsistenManajer() && Route::has('dashboard.asmen'))
-            <a href="{{ route('dashboard.asmen') }}" class="nav-link {{ request()->routeIs('dashboard.asmen') || request()->routeIs('approval.*') ? 'active' : '' }}">
+            @if (auth()->user()->isPemberiKeputusan())
+            <a href="{{ $dashboardUrl }}" class="nav-link {{ request()->routeIs($rutePersetujuan) ? 'active' : '' }}">
                 <i class="fas fa-square-check"></i><span>Persetujuan</span>
             </a>
             @endif
@@ -351,7 +353,9 @@
             </a>
             @endif
 
-            {{-- Kelola Data Pengguna: akun Admin Departemen/Manajer/Asisten Manajer --}}
+            {{-- Kelola Data Pengguna: akun Admin Departemen / Manajer Departemen /
+                 Senior Manajer Sekper / Kepala SPI / Direktur — semua role yang
+                 memberi keputusan atau mengelola sistem. --}}
             @if (Route::has('sdm.pengguna.index'))
             <a href="{{ route('sdm.pengguna.index') }}" class="nav-link {{ request()->routeIs('sdm.pengguna.*') ? 'active' : '' }}">
                 <i class="fas fa-users-gear"></i><span>Manajemen Pengguna</span>

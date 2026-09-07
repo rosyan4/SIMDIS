@@ -11,6 +11,12 @@ class Dispensasi extends Model
 {
     use HasFactory;
 
+    private const DEPARTEMEN_TEKNIK = ['PWS', 'REN', 'PRD', 'DIST'];
+
+    private const DEPARTEMEN_ADMINISTRASI_KEUANGAN = ['SDM', 'BSN1', 'BSN2', 'KEU', 'PEL'];
+
+    private const DEPARTEMEN_MANDIRI = ['PGD', 'IT'];
+
     protected $fillable = [
         'nomor_dispensasi',
         'pegawai_id',
@@ -37,10 +43,6 @@ class Dispensasi extends Model
         ];
     }
 
-    // ================================================================
-    // RELASI
-    // ================================================================
-
     public function pegawai(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class);
@@ -65,10 +67,6 @@ class Dispensasi extends Model
     {
         return $this->belongsTo(User::class, 'diproses_oleh_id');
     }
-
-    // ================================================================
-    // SCOPE
-    // ================================================================
 
     public function scopeMenungguPersetujuan($query)
     {
@@ -117,9 +115,44 @@ class Dispensasi extends Model
         return $query->whereBetween('tanggal_dispensasi', [$start, $end]);
     }
 
-    // ================================================================
-    // HELPER
-    // ================================================================
+    public function scopeUntukPemberiKeputusan($query, User $user)
+    {
+        return match ($user->role) {
+            'direktur_teknik' => $query->whereHas(
+                'departemen',
+                fn ($q) => $q->whereIn('kode_departemen', self::DEPARTEMEN_TEKNIK)
+            ),
+
+            'direktur_utama' => $query->where(function ($q) {
+                $q->whereHas('departemen', fn ($qq) => $qq->where('kode_departemen', 'SEK'))
+                  ->whereHas('pegawai', fn ($qq) => $qq->where('posisi', 'senior_manajer_sekper'));
+            })->orWhere(function ($q) {
+                $q->whereHas('departemen', fn ($qq) => $qq->where('kode_departemen', 'SPI'))
+                  ->whereHas('pegawai', fn ($qq) => $qq->where('posisi', 'kepala_spi'));
+            })->orWhere(function ($q) {
+                $q->whereHas('departemen', fn ($qq) => $qq->whereIn('kode_departemen', self::DEPARTEMEN_MANDIRI))
+                  ->whereHas('pegawai', fn ($qq) => $qq->where('posisi', 'manajer'));
+            }),
+
+            'direktur_administrasi_keuangan' => $query
+                ->whereHas('departemen', fn ($q) => $q->whereIn('kode_departemen', self::DEPARTEMEN_ADMINISTRASI_KEUANGAN))
+                ->whereHas('pegawai', fn ($q) => $q->whereIn('posisi', ['manajer', 'senior_manajer_bisnis', 'senior_manajer_keuangan_pelanggan'])),
+
+            'senior_manajer_sekper' => $query
+                ->where('departemen_id', $user->departemen_id)
+                ->whereHas('pegawai', fn ($q) => $q->whereIn('posisi', ['staf', 'asisten_manajer_bidang'])),
+
+            'kepala_spi' => $query
+                ->where('departemen_id', $user->departemen_id)
+                ->whereHas('pegawai', fn ($q) => $q->whereIn('posisi', ['staf', 'sekretaris_spi'])),
+
+            'manajer_departemen' => $query
+                ->where('departemen_id', $user->departemen_id)
+                ->whereHas('pegawai', fn ($q) => $q->whereIn('posisi', ['staf', 'asisten_manajer_bidang'])),
+
+            default => $query->whereRaw('1 = 0'),
+        };
+    }
 
     public function isMenungguPersetujuan(): bool
     {
@@ -141,17 +174,47 @@ class Dispensasi extends Model
         return in_array($this->status_pengajuan, ['disetujui', 'ditolak']);
     }
 
-    /**
-     * Generate nomor dispensasi otomatis (KF-07), format: DISP/YYYY/MM/00001.
-     *
-     * Dibungkus DB::transaction() + lockForUpdate() supaya aman dari race condition:
-     * kalau dua Admin Departemen submit pengajuan bersamaan di bulan yang sama,
-     * baris terakhir di bulan itu dikunci sampai transaction pertama selesai,
-     * sehingga transaction kedua menunggu dan tidak mendapat nomor urut yang sama.
-     *
-     * Panggil method ini DI DALAM transaction yang sama dengan Dispensasi::create(),
-     * bukan terpisah, supaya lock-nya benar-benar melindungi proses insert.
-     */
+    public function pemberiKeputusan(): ?User
+    {
+        $departemen = $this->departemen ?? $this->departemen()->first();
+        $kode = $departemen?->kode_departemen;
+        $posisi = ($this->pegawai ?? $this->pegawai()->first())?->posisi;
+
+        if ($kode === null) {
+            return null;
+        }
+
+        if (in_array($kode, self::DEPARTEMEN_TEKNIK, true)) {
+            return User::role('direktur_teknik')->active()->first();
+        }
+
+        if ($kode === 'SEK') {
+            return $posisi === 'senior_manajer_sekper'
+                ? User::role('direktur_utama')->active()->first()
+                : User::role('senior_manajer_sekper')->where('departemen_id', $departemen->id)->active()->first();
+        }
+
+        if ($kode === 'SPI') {
+            return $posisi === 'kepala_spi'
+                ? User::role('direktur_utama')->active()->first()
+                : User::role('kepala_spi')->where('departemen_id', $departemen->id)->active()->first();
+        }
+
+        if (in_array($kode, self::DEPARTEMEN_MANDIRI, true)) {
+            return $posisi === 'manajer'
+                ? User::role('direktur_utama')->active()->first()
+                : User::role('manajer_departemen')->where('departemen_id', $departemen->id)->active()->first();
+        }
+
+        if (in_array($kode, self::DEPARTEMEN_ADMINISTRASI_KEUANGAN, true)) {
+            return in_array($posisi, ['manajer', 'senior_manajer_bisnis', 'senior_manajer_keuangan_pelanggan'], true)
+                ? User::role('direktur_administrasi_keuangan')->active()->first()
+                : User::role('manajer_departemen')->where('departemen_id', $departemen->id)->active()->first();
+        }
+
+        return null;
+    }
+
     public static function generateNomor(): string
     {
         return DB::transaction(function () {

@@ -14,18 +14,14 @@ class Pegawai extends Model
     protected $fillable = [
         'nik',
         'nama_pegawai',
-        'jenis_pegawai',
         'jabatan',
+        'posisi',
         'departemen_id',
         'subdepartemen_id',
         'no_telepon',
         'email',
         'status',
     ];
-
-    // ================================================================
-    // RELASI
-    // ================================================================
 
     public function departemen(): BelongsTo
     {
@@ -41,10 +37,6 @@ class Pegawai extends Model
     {
         return $this->hasMany(Dispensasi::class);
     }
-
-    // ================================================================
-    // SCOPE
-    // ================================================================
 
     public function scopeAktif($query)
     {
@@ -66,9 +58,10 @@ class Pegawai extends Model
         return $query->where('subdepartemen_id', $subdepartemenId);
     }
 
-    // ================================================================
-    // HELPER
-    // ================================================================
+    public function scopePosisi($query, string $posisi)
+    {
+        return $query->where('posisi', $posisi);
+    }
 
     public function isAktif(): bool
     {
@@ -78,5 +71,25 @@ class Pegawai extends Model
     public function isNonaktif(): bool
     {
         return $this->status === 'nonaktif';
+    }
+
+    public function isManajer(): bool
+    {
+        return $this->posisi === 'manajer';
+    }
+
+    public function isSeniorManajerSekper(): bool
+    {
+        return $this->posisi === 'senior_manajer_sekper';
+    }
+
+    public function isKepalaSpi(): bool
+    {
+        return $this->posisi === 'kepala_spi';
+    }
+
+    public function isPosisiPuncakDepartemen(): bool
+    {
+        return in_array($this->posisi, ['manajer', 'senior_manajer_sekper', 'kepala_spi']);
     }
 }

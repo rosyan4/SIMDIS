@@ -28,22 +28,32 @@
 </div>
 
 <div class="grid lg:grid-cols-2 gap-4 mb-6">
-    {{-- Manajer & Admin --}}
+    {{-- Pemberi keputusan dispensasi & Admin --}}
     <div class="card p-6">
-        <h3 class="font-semibold text-ink mb-4">Manajer & Admin Departemen</h3>
+        @php
+            $pemberiKeputusan = $departemen->pemberiKeputusanUtama();
+            $departemenTeknik = ['PWS', 'REN', 'PRD', 'DIST'];
+            $labelRolePk = match (true) {
+                in_array($departemen->kode_departemen, $departemenTeknik, true) => 'Direktur Teknik',
+                $departemen->kode_departemen === 'SEK' => 'Senior Manajer Sekretaris Perusahaan',
+                $departemen->kode_departemen === 'SPI' => 'Kepala SPI',
+                default => 'Manajer Departemen',
+            };
+        @endphp
+        <h3 class="font-semibold text-ink mb-4">Pemberi Keputusan Dispensasi</h3>
 
         <div class="flex items-center gap-3 mb-4 pb-4 border-b border-line">
             <div class="h-10 w-10 rounded-lg bg-primary text-white font-bold flex items-center justify-center shrink-0">
-                {{ $departemen->manajerAktif ? strtoupper(substr($departemen->manajerAktif->name, 0, 1)) : '-' }}
+                {{ $pemberiKeputusan ? strtoupper(substr($pemberiKeputusan->name, 0, 1)) : '-' }}
             </div>
             <div class="min-w-0 flex-1">
-                <p class="text-sm font-semibold text-ink truncate">{{ $departemen->manajerAktif?->name ?? 'Belum ada Manajer aktif' }}</p>
-                <p class="text-xs text-ink-soft">Manajer Departemen</p>
+                <p class="text-sm font-semibold text-ink truncate">{{ $pemberiKeputusan?->name ?? 'Belum ada pemberi keputusan aktif' }}</p>
+                <p class="text-xs text-ink-soft">{{ $labelRolePk }}</p>
             </div>
-            @if ($departemen->manajerAktif)
+            @if ($pemberiKeputusan)
             <span class="badge badge-disetujui">Aktif</span>
             @else
-            <span class="badge badge-menunggu">Kosong</span>
+            <span class="badge badge-ditolak">Kosong</span>
             @endif
         </div>
 
@@ -101,7 +111,6 @@
             <tr>
                 <th>Kode</th>
                 <th>Nama Subdepartemen</th>
-                <th>Asisten Manajer</th>
                 <th>Pegawai Aktif</th>
             </tr>
         </thead>
@@ -111,17 +120,10 @@
             <tr>
                 <td class="mono-data text-ink-soft">{{ $sub->kode_subdepartemen }}</td>
                 <td class="font-medium">{{ $sub->nama_subdepartemen }}</td>
-                <td>
-                    @if ($sub->asistenManajerAktif)
-                    <span class="text-ink">{{ $sub->asistenManajerAktif->name }}</span>
-                    @else
-                    <span class="text-ink-soft">Belum ditugaskan</span>
-                    @endif
-                </td>
                 <td class="mono-data">{{ $ss['pegawai_aktif'] ?? 0 }}</td>
             </tr>
             @empty
-            <tr><td colspan="4" class="text-center text-ink-soft py-8">Departemen ini belum punya subdepartemen.</td></tr>
+            <tr><td colspan="3" class="text-center text-ink-soft py-8">Departemen ini belum punya subdepartemen.</td></tr>
             @endforelse
         </tbody>
     </table>

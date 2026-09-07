@@ -31,7 +31,7 @@
                 <li>NIK <span class="text-ink-soft">(wajib)</span></li>
                 <li>Nama Pegawai <span class="text-ink-soft">(wajib)</span></li>
                 <li>Departemen <span class="text-ink-soft">(wajib)</span></li>
-                <li>Jenis Pegawai, Jabatan, Subdepartemen, No. Telepon, Email <span class="text-ink-soft">(opsional)</span></li>
+                <li>Jabatan, Subdepartemen, No. Telepon, Email <span class="text-ink-soft">(opsional)</span></li>
             </ul>
         </div>
 

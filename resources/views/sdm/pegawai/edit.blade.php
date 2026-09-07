@@ -13,6 +13,19 @@
         'id' => $d->id,
         'subdepartemens' => $d->subdepartemens->map(fn ($s) => ['id' => $s->id, 'nama' => $s->nama_subdepartemen]),
     ]);
+
+    $posisiLabels = [
+        'staf'                                => 'Staf',
+        'asisten_manajer_bidang'              => 'Asisten Manajer Bidang',
+        'manajer'                             => 'Manajer',
+        'senior_manajer_sekper'               => 'Senior Manajer Sekretaris Perusahaan',
+        'senior_manajer_bisnis'               => 'Senior Manajer Bisnis',
+        'senior_manajer_keuangan_pelanggan'   => 'Senior Manajer Keuangan dan Pengelolaan Pelanggan',
+        'senior_manajer_produksi_distribusi'  => 'Senior Manajer Produksi dan Distribusi',
+        'senior_manajer_perencanaan_aset'     => 'Senior Manajer Perencanaan dan Pengelolaan Aset',
+        'kepala_spi'                          => 'Kepala SPI',
+        'sekretaris_spi'                      => 'Sekretaris SPI',
+    ];
 @endphp
 
 <form method="POST" action="{{ route('sdm.pegawai.update', $pegawai) }}" class="card p-6 max-w-3xl"
@@ -43,16 +56,6 @@
 
     <div class="grid md:grid-cols-2 gap-5 mb-5">
         <div>
-            <label class="field-label" for="jenis_pegawai">Jenis Pegawai</label>
-            <select id="jenis_pegawai" name="jenis_pegawai" class="field-input" required>
-                @foreach (['pegawai' => 'Pegawai', 'pekerja_lapangan' => 'Pekerja Lapangan'] as $val => $label)
-                <option value="{{ $val }}" @selected(old('jenis_pegawai', $pegawai->jenis_pegawai) === $val)>{{ $label }}</option>
-                @endforeach
-            </select>
-            @error('jenis_pegawai') <p class="field-error">{{ $message }}</p> @enderror
-        </div>
-
-        <div>
             <label class="field-label" for="jabatan">Jabatan</label>
             <select id="jabatan" name="jabatan" class="field-input" required>
                 <option value="">— Pilih Jabatan —</option>
@@ -61,6 +64,17 @@
                 @endforeach
             </select>
             @error('jabatan') <p class="field-error">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label class="field-label" for="posisi">Posisi</label>
+            <select id="posisi" name="posisi" class="field-input" required>
+                <option value="">— Pilih Posisi —</option>
+                @foreach (\App\Http\Requests\StorePegawaiRequest::PILIHAN_POSISI as $p)
+                <option value="{{ $p }}" @selected(old('posisi', $pegawai->posisi) === $p)>{{ $posisiLabels[$p] ?? $p }}</option>
+                @endforeach
+            </select>
+            @error('posisi') <p class="field-error">{{ $message }}</p> @enderror
         </div>
     </div>
 

@@ -13,13 +13,9 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class PegawaiImportController extends Controller
 {
-    // KF-05 (Import Data Pegawai). Target import adalah tabel pegawais
-    // (data master), bukan akun User — jadi tidak ada lagi field "role"
-    // atau penugasan manajer/asisten manajer di sini.
     private const TARGET_FIELDS = [
         'nik'              => 'NIK',
         'nama'             => 'Nama Pegawai',
-        'jenis_pegawai'    => 'Jenis Pegawai',
         'jabatan'          => 'Jabatan',
         'departemen'       => 'Departemen',
         'subdepartemen'    => 'Subdepartemen',
@@ -32,9 +28,6 @@ class PegawaiImportController extends Controller
         return view('sdm.pegawai.import');
     }
 
-    /**
-     * Langkah 2: baca header + beberapa baris awal file, tampilkan form pemetaan kolom.
-     */
     public function preview(Request $request)
     {
         $request->validate([
@@ -61,9 +54,6 @@ class PegawaiImportController extends Controller
         ]);
     }
 
-    /**
-     * Langkah 3: proses import sesuai pemetaan kolom yang dipilih Admin SDM.
-     */
     public function confirm(Request $request)
     {
         $request->validate([
@@ -94,7 +84,6 @@ class PegawaiImportController extends Controller
                 $nama = trim((string) ($row[$mapping['nama']] ?? ''));
                 $namaDept = $this->ambilKolom($row, $mapping, 'departemen');
                 $namaSub = $this->ambilKolom($row, $mapping, 'subdepartemen');
-                $jenisRaw = strtolower($this->ambilKolom($row, $mapping, 'jenis_pegawai') ?? 'pegawai');
                 $jabatanRaw = $this->ambilKolom($row, $mapping, 'jabatan');
                 $noTelepon = $this->ambilKolom($row, $mapping, 'no_telepon');
                 $email = $this->ambilKolom($row, $mapping, 'email');
@@ -109,7 +98,6 @@ class PegawaiImportController extends Controller
                     continue;
                 }
 
-                // Departemen WAJIB (kolom departemen_id di migration pegawais tidak nullable).
                 $departemen = $namaDept ? $this->cariDepartemen($namaDept) : null;
                 if (! $departemen) {
                     $gagal[] = "Baris {$baris}: departemen '{$namaDept}' tidak dikenali sistem atau kosong, baris dilewati.";
@@ -121,25 +109,17 @@ class PegawaiImportController extends Controller
                     $gagal[] = "Baris {$baris}: subdepartemen '{$namaSub}' tidak dikenali sistem, pegawai dibuat tanpa penempatan subdepartemen.";
                 }
 
-                $jenisPegawai = in_array($jenisRaw, ['pegawai', 'pekerja_lapangan'], true) ? $jenisRaw : 'pegawai';
-
-                // Jabatan harus salah satu dari StorePegawaiRequest::PILIHAN_JABATAN
-                // (sama dengan yang dipakai di form Tambah/Edit Pegawai). Dicocokkan
-                // tanpa peduli besar-kecil huruf; kalau tidak ketemu, fallback ke
-                // 'Pegawai Tetap' dan baris tetap masuk (tidak dilewati) — dilaporkan
-                // di $gagal supaya Admin SDM tahu perlu dikoreksi manual nanti.
                 $jabatan = collect(\App\Http\Requests\StorePegawaiRequest::PILIHAN_JABATAN)
                     ->first(fn ($j) => strtolower($j) === strtolower((string) $jabatanRaw));
 
                 if (! $jabatan) {
-                    $jabatan = 'Pegawai Tetap';
-                    $gagal[] = "Baris {$baris}: jabatan '{$jabatanRaw}' tidak dikenali sistem, diset ke 'Pegawai Tetap' — cek & koreksi manual kalau perlu.";
+                    $jabatan = 'Staf';
+                    $gagal[] = "Baris {$baris}: jabatan '{$jabatanRaw}' tidak dikenali sistem, diset ke 'Staf' — cek & koreksi manual kalau perlu.";
                 }
 
                 Pegawai::create([
                     'nik'              => $nik,
                     'nama_pegawai'     => $nama,
-                    'jenis_pegawai'    => $jenisPegawai,
                     'jabatan'          => $jabatan,
                     'departemen_id'    => $departemen->id,
                     'subdepartemen_id' => $subdepartemen?->id,
@@ -168,16 +148,12 @@ class PegawaiImportController extends Controller
         return trim((string) ($row[$mapping[$field]] ?? '')) ?: null;
     }
 
-    /**
-     * Tebak otomatis kolom Excel mana yang cocok dengan tiap field sistem.
-     */
     private function suggestMapping(array $headers): array
     {
         $keywords = [
             'nik'           => ['nik'],
             'nama'          => ['nama', 'name'],
-            'jenis_pegawai' => ['jenis', 'tipe'],
-            'jabatan'       => ['jabatan', 'posisi'],
+            'jabatan'       => ['jabatan'],
             'subdepartemen' => ['subdepartemen', 'sub departemen', 'sub-departemen', 'unit'],
             'departemen'    => ['departemen', 'department', 'divisi'],
             'no_telepon'    => ['telepon', 'telp', 'hp', 'phone'],
@@ -203,9 +179,6 @@ class PegawaiImportController extends Controller
             }
         }
 
-        // Tahap 2: untuk field yang belum ketemu, cari yang MENGANDUNG kata kunci.
-        // Field "departemen" sengaja melewati header yang mengandung "sub", supaya
-        // tidak salah tangkap kolom "Subdepartemen".
         foreach ($keywords as $field => $terms) {
             if (isset($suggestion[$field])) continue;
 
@@ -250,9 +223,6 @@ class PegawaiImportController extends Controller
               ->orWhereRaw('LOWER(nama_subdepartemen) LIKE ?', ['%' . $normalSub . '%']);
         });
 
-        // Kalau nama departemen ditemukan, pakai untuk mempersempit pencarian.
-        // Kalau tidak, tetap lanjut cari subdepartemen tanpa filter itu (fallback),
-        // supaya 1 kesalahan ketik departemen tidak menggagalkan seluruh baris.
         if ($namaDept) {
             $departemen = $this->cariDepartemen($namaDept);
             if ($departemen) {

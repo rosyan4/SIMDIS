@@ -9,12 +9,31 @@ class StorePegawaiRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Otorisasi role Admin SDM ditangani middleware route
+        return true;
     }
 
-    // Daftar jabatan tetap — dipakai bareng di form (dropdown) dan validasi di sini,
-    // supaya kalau perlu ubah daftarnya nanti cukup di satu tempat ini saja.
-    public const PILIHAN_JABATAN = ['Pegawai Tetap', 'Calon Pegawai', 'Asisten Manajer', 'Asisten Bidang'];
+    public const PILIHAN_JABATAN = [
+        'Staf',
+        'Asisten Manajer',
+        'Asisten Bidang',
+        'Manajer',
+        'Senior Manajer',
+        'Kepala SPI',
+        'Sekretaris SPI',
+    ];
+
+    public const PILIHAN_POSISI = [
+        'staf',
+        'asisten_manajer_bidang',
+        'manajer',
+        'senior_manajer_sekper',
+        'senior_manajer_bisnis',
+        'senior_manajer_keuangan_pelanggan',
+        'senior_manajer_produksi_distribusi',
+        'senior_manajer_perencanaan_aset',
+        'kepala_spi',
+        'sekretaris_spi',
+    ];
 
     public function rules(): array
     {
@@ -23,8 +42,8 @@ class StorePegawaiRequest extends FormRequest
         return [
             'nik'              => ['required', 'string', 'max:20', Rule::unique('pegawais', 'nik')->ignore($pegawaiId)],
             'nama_pegawai'     => ['required', 'string', 'max:100'],
-            'jenis_pegawai'    => ['required', Rule::in(['pegawai', 'pekerja_lapangan'])],
             'jabatan'          => ['required', Rule::in(self::PILIHAN_JABATAN)],
+            'posisi'           => ['required', Rule::in(self::PILIHAN_POSISI)],
             'departemen_id'    => ['required', 'exists:departemens,id'],
             'subdepartemen_id' => ['nullable', 'exists:subdepartemens,id'],
             'no_telepon'       => ['nullable', 'string', 'max:20'],

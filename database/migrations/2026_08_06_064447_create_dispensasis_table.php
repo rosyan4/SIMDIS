@@ -10,15 +10,8 @@ return new class extends Migration
     {
         Schema::create('dispensasis', function (Blueprint $table) {
             $table->id();
-
-            // Nomor dispensasi otomatis. unique() sudah membuat index,
-            // tidak perlu index('nomor_dispensasi') lagi.
             $table->string('nomor_dispensasi', 50)->unique();
-
-            // Pegawai yang mengajukan
             $table->foreignId('pegawai_id')->constrained('pegawais')->restrictOnDelete();
-
-            // Struktur organisasi pegawai (denormalisasi untuk performa)
             $table->foreignId('departemen_id')->constrained('departemens')->restrictOnDelete();
             $table->foreignId('subdepartemen_id')->nullable()->constrained('subdepartemens')->nullOnDelete();
 
@@ -30,7 +23,7 @@ return new class extends Migration
             // Data dispensasi
             $table->date('tanggal_pengajuan');
             $table->date('tanggal_dispensasi');
-            $table->enum('waktu_dispensasi', ['pagi', 'istirahat', 'siang', 'sore']);
+            $table->enum('waktu_dispensasi', ['T', 'TBO', 'TBI', 'CP']);
             $table->text('keterangan');
             $table->string('bukti_pendukung', 255)->nullable();
 
@@ -41,16 +34,14 @@ return new class extends Migration
                 'ditolak',
             ])->default('menunggu_persetujuan');
 
-            // Pihak yang memproses (Manajer atau Asisten Manajer)
             $table->foreignId('diproses_oleh_id')
                   ->nullable()
-                  ->comment('User (manajer_departemen atau asisten_manajer) yang memberi keputusan')
+                  ->comment('User yang memberi keputusan final atas pengajuan ini')
                   ->constrained('users')->nullOnDelete();
 
             // Data persetujuan
             $table->text('catatan_persetujuan')->nullable();
             $table->timestamp('tanggal_keputusan')->nullable();
-
             $table->timestamps();
 
             // Index untuk performa monitoring

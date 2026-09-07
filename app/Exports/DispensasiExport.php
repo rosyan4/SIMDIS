@@ -13,16 +13,13 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-/**
- * KF-23 (Export Data Dispensasi): hanya pengajuan berstatus DISETUJUI,
- * diurutkan per departemen (A-Z) lalu nama pegawai (A-Z) — sesuai
- * kebutuhan dokumen ("export per departemen per bulan, terurut A-Z").
- */
 class DispensasiExport implements FromQuery, WithHeadings, WithMapping, WithTitle, ShouldAutoSize, WithStyles
 {
     use Exportable;
 
     private int $nomor = 0;
+
+    private ?int $pegawaiIdSebelumnya = null;
 
     public function __construct(
         private readonly ?string $tahun,
@@ -47,14 +44,9 @@ class DispensasiExport implements FromQuery, WithHeadings, WithMapping, WithTitl
         }
 
         if ($this->departemenId) {
-            // Wajib prefix 'dispensasis.' — setelah di-join ke pegawais, kolom
-            // departemen_id jadi ambigu karena tabel pegawais JUGA punya kolom
-            // departemen_id sendiri (SQLSTATE 23000 kalau tidak di-qualify).
             $query->where('dispensasis.departemen_id', $this->departemenId);
         }
 
-        // select('dispensasis.*') WAJIB ada supaya hasil join tetap ter-hydrate
-        // sebagai model Dispensasi yang utuh (bukan campuran kolom departemens/pegawais).
         return $query
             ->join('departemens', 'departemens.id', '=', 'dispensasis.departemen_id')
             ->join('pegawais', 'pegawais.id', '=', 'dispensasis.pegawai_id')
@@ -87,12 +79,10 @@ class DispensasiExport implements FromQuery, WithHeadings, WithMapping, WithTitl
     {
         $this->nomor++;
 
-        $waktuLabel = [
-            'pagi'      => 'Pagi',
-            'istirahat' => 'Istirahat',
-            'siang'     => 'Siang',
-            'sore'      => 'Sore',
-        ][$dispensasi->waktu_dispensasi] ?? $dispensasi->waktu_dispensasi;
+        $waktuLabel = $dispensasi->waktu_dispensasi;
+
+        $pegawaiBaru = $dispensasi->pegawai_id !== $this->pegawaiIdSebelumnya;
+        $this->pegawaiIdSebelumnya = $dispensasi->pegawai_id;
 
         return [
             $this->nomor,
@@ -100,7 +90,7 @@ class DispensasiExport implements FromQuery, WithHeadings, WithMapping, WithTitl
             $dispensasi->departemen->nama_departemen,
             $dispensasi->subdepartemen?->nama_subdepartemen ?? '-',
             $dispensasi->pegawai->nik,
-            $dispensasi->pegawai->nama_pegawai,
+            $pegawaiBaru ? $dispensasi->pegawai->nama_pegawai : '',
             $dispensasi->pegawai->jabatan,
             $dispensasi->tanggal_dispensasi->format('d-m-Y'),
             $waktuLabel,
@@ -123,7 +113,6 @@ class DispensasiExport implements FromQuery, WithHeadings, WithMapping, WithTitl
             $judul .= ' ' . $this->tahun;
         }
 
-        // Nama sheet Excel dibatasi maksimal 31 karakter oleh format .xlsx itu sendiri.
         return substr($judul, 0, 31);
     }
 

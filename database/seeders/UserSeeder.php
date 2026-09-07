@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Departemen;
-use App\Models\Subdepartemen;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -11,25 +10,12 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Butuh DepartemenSeeder (departemens + subdepartemens) sudah dijalankan
-     * lebih dulu. Urutan di DatabaseSeeder.php:
-     *
-     *   $this->call([
-     *       DepartemenSeeder::class,
-     *       UserSeeder::class,
-     *   ]);
-     *
-     * Semua akun di sini pakai password default yang sama ('password123'),
-     * jadi must_change_password di-set true supaya wajib diganti saat login
-     * pertama (PasswordChangeController).
-     */
     public function run(): void
     {
         DB::transaction(function () {
             $defaultPassword = Hash::make('password123'); // ganti/hapus sebelum production
 
-            // 1. Admin SDM — tidak terikat departemen/subdepartemen manapun
+            // 1. Admin SDM
             User::create([
                 'name'                  => 'Admin SDM',
                 'email'                 => 'adminsdm@tirtamayang.co.id',
@@ -41,7 +27,7 @@ class UserSeeder extends Seeder
                 'must_change_password'  => true,
             ]);
 
-            // 2. Admin Departemen & Manajer Departemen — satu pasang per departemen
+            // 2. Admin Departemen
             Departemen::all()->each(function (Departemen $departemen) use ($defaultPassword) {
                 $slug = str($departemen->nama_departemen)->slug('.');
 
@@ -55,35 +41,87 @@ class UserSeeder extends Seeder
                     'is_active'             => true,
                     'must_change_password'  => true,
                 ]);
-
-                User::create([
-                    'name'                  => "Manajer {$departemen->nama_departemen}",
-                    'email'                 => "manajer.{$slug}@tirtamayang.co.id",
-                    'password'              => $defaultPassword,
-                    'role'                  => 'manajer_departemen',
-                    'departemen_id'         => $departemen->id,
-                    'subdepartemen_id'      => null,
-                    'status_manajer'        => 'aktif',
-                    'is_active'             => true,
-                    'must_change_password'  => true,
-                ]);
             });
 
-            // 3. Asisten Manajer — satu per subdepartemen
-            Subdepartemen::all()->each(function (Subdepartemen $subdepartemen) use ($defaultPassword) {
-                $slug = str($subdepartemen->nama_subdepartemen)->slug('.');
+            // 3. Manajer Departemen 
+            $kodeDepartemenBermanajer = ['IT', 'PGD', 'SDM', 'BSN1', 'BSN2', 'KEU', 'PEL'];
 
-                User::create([
-                    'name'                  => "Asisten Manajer {$subdepartemen->nama_subdepartemen}",
-                    'email'                 => "asmen.{$slug}@tirtamayang.co.id",
-                    'password'              => $defaultPassword,
-                    'role'                  => 'asisten_manajer',
-                    'departemen_id'         => null,
-                    'subdepartemen_id'      => $subdepartemen->id,
-                    'is_active'             => true,
-                    'must_change_password'  => true,
-                ]);
-            });
+            Departemen::whereIn('kode_departemen', $kodeDepartemenBermanajer)
+                ->get()
+                ->each(function (Departemen $departemen) use ($defaultPassword) {
+                    $slug = str($departemen->nama_departemen)->slug('.');
+
+                    User::create([
+                        'name'                  => "Manajer {$departemen->nama_departemen}",
+                        'email'                 => "manajer.{$slug}@tirtamayang.co.id",
+                        'password'              => $defaultPassword,
+                        'role'                  => 'manajer_departemen',
+                        'departemen_id'         => $departemen->id,
+                        'subdepartemen_id'      => null,
+                        'is_active'             => true,
+                        'must_change_password'  => true,
+                    ]);
+                });
+
+            // 4. Senior Manajer Sekretaris Perusahaan
+            $sekretariat = Departemen::where('kode_departemen', 'SEK')->first();
+            User::create([
+                'name'                  => 'Senior Manajer Sekretaris Perusahaan',
+                'email'                 => 'seniormanajer.sekretariat-perusahaan@tirtamayang.co.id',
+                'password'              => $defaultPassword,
+                'role'                  => 'senior_manajer_sekper',
+                'departemen_id'         => $sekretariat->id,
+                'subdepartemen_id'      => null,
+                'is_active'             => true,
+                'must_change_password'  => true,
+            ]);
+
+            // 5. Kepala SPI 
+            $spi = Departemen::where('kode_departemen', 'SPI')->first();
+            User::create([
+                'name'                  => 'Kepala SPI',
+                'email'                 => 'kepala.spi@tirtamayang.co.id',
+                'password'              => $defaultPassword,
+                'role'                  => 'kepala_spi',
+                'departemen_id'         => $spi->id,
+                'subdepartemen_id'      => null,
+                'is_active'             => true,
+                'must_change_password'  => true,
+            ]);
+
+            // 6. Direksi 
+            User::create([
+                'name'                  => 'Direktur Teknik',
+                'email'                 => 'direktur.teknik@tirtamayang.co.id',
+                'password'              => $defaultPassword,
+                'role'                  => 'direktur_teknik',
+                'departemen_id'         => null,
+                'subdepartemen_id'      => null,
+                'is_active'             => true,
+                'must_change_password'  => true,
+            ]);
+
+            User::create([
+                'name'                  => 'Direktur Administrasi & Keuangan',
+                'email'                 => 'direktur.administrasi-keuangan@tirtamayang.co.id',
+                'password'              => $defaultPassword,
+                'role'                  => 'direktur_administrasi_keuangan',
+                'departemen_id'         => null,
+                'subdepartemen_id'      => null,
+                'is_active'             => true,
+                'must_change_password'  => true,
+            ]);
+
+            User::create([
+                'name'                  => 'Direktur Utama',
+                'email'                 => 'direktur.utama@tirtamayang.co.id',
+                'password'              => $defaultPassword,
+                'role'                  => 'direktur_utama',
+                'departemen_id'         => null,
+                'subdepartemen_id'      => null,
+                'is_active'             => true,
+                'must_change_password'  => true,
+            ]);
         });
     }
 }

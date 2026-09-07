@@ -22,9 +22,9 @@ class DispensasiDiajukan extends Notification
         return [
             'dispensasi_id' => $this->dispensasi->id,
             'nomor_dispensasi' => $this->dispensasi->nomor_dispensasi,
-            'nama_pegawai' => $this->dispensasi->pegawai->name,
-            'pesan' => "Pengajuan dispensasi baru dari {$this->dispensasi->pegawai->name} menunggu persetujuan Anda.",
-            'url' => '/manajer/dashboard',
+            'nama_pegawai' => $this->dispensasi->pegawai->nama_pegawai,
+            'pesan' => "Pengajuan dispensasi baru dari {$this->dispensasi->pegawai->nama_pegawai} menunggu persetujuan Anda.",
+            'url' => route('approval.show', $this->dispensasi),
         ];
     }
 }

@@ -28,41 +28,49 @@ Route::middleware('auth')->group(function () {
         auth()->user()->unreadNotifications->markAsRead();
         return response()->json(['ok' => true]);
     })->name('notifikasi.markAllRead');
+
+    Route::get('/notifikasi/{notifikasi}/buka', function (\Illuminate\Notifications\DatabaseNotification $notifikasi) {
+        abort_unless($notifikasi->notifiable_id === auth()->id(), 403);
+
+        $notifikasi->markAsRead();
+
+        return redirect($notifikasi->data['url'] ?? route('login'));
+    })->name('notifikasi.buka');
 });
 
-// Admin Departemen: menginput dispensasi ATAS NAMA pegawai (KF-09) — Pegawai
-// sendiri tidak punya akun/login, jadi ini BUKAN role 'pegawai' (tidak ada
-// role itu di skema kita).
 Route::middleware(['auth', 'role:admin_departemen'])->group(function () {
     Route::get('/dispensasi/create', [DispensasiController::class, 'create'])->name('dispensasi.create');
     Route::post('/dispensasi', [DispensasiController::class, 'store'])->name('dispensasi.store');
     Route::get('/dispensasi', [DispensasiController::class, 'index'])->name('dispensasi.index');
+    Route::get('/dispensasi/export-pdf', [DispensasiController::class, 'exportPdf'])->name('dispensasi.export.pdf');
     Route::get('/dispensasi/{dispensasi}', [DispensasiController::class, 'show'])->name('dispensasi.show');
-
-    // Alias: dashboardRoute() di User model mengarahkan admin_departemen ke sini.
-    // Riwayat dispensasi ITU dashboard-nya, sama seperti pola dashboard.manajer/
-    // dashboard.asmen di bawah — bukan halaman kosong terpisah.
-    Route::get('/admin-departemen/dashboard', [DispensasiController::class, 'index'])->name('dashboard.admin-departemen');
 });
 
-Route::middleware(['auth', 'role:manajer_departemen'])->group(function () {
-    Route::get('/manajer/dashboard', [ApprovalController::class, 'indexManajer'])->name('dashboard.manajer');
-});
+Route::middleware([
+    'auth',
+    'role:manajer_departemen,senior_manajer_sekper,kepala_spi,direktur_teknik,direktur_administrasi_keuangan,direktur_utama',
+])->group(function () {
 
-Route::middleware(['auth', 'role:asisten_manajer'])->group(function () {
-    Route::get('/asmen/dashboard', [ApprovalController::class, 'indexAsmen'])->name('dashboard.asmen');
-});
-
-Route::middleware(['auth', 'role:manajer_departemen,asisten_manajer'])->group(function () {
+    // Route generik untuk daftar & aksi approval — dipakai oleh view
+    Route::get('/persetujuan', [ApprovalController::class, 'index'])->name('approval.index');
     Route::get('/persetujuan/{dispensasi}', [ApprovalController::class, 'show'])->name('approval.show');
-    Route::post('/dispensasi/{dispensasi}/approve', [ApprovalController::class, 'approve'])->name('dispensasi.approve');
-    Route::post('/dispensasi/{dispensasi}/reject', [ApprovalController::class, 'reject'])->name('dispensasi.reject');
+    Route::post('/dispensasi/{dispensasi}/approve', [ApprovalController::class, 'approve'])->name('approval.approve');
+    Route::post('/dispensasi/{dispensasi}/reject', [ApprovalController::class, 'reject'])->name('approval.reject');
+
+    // Route dashboard per role — dipakai oleh Auth::user()->dashboardRoute()
+    Route::get('/manajer/dashboard', [ApprovalController::class, 'index'])->name('dashboard.manajer');
+    Route::get('/sekretaris-perusahaan/dashboard', [ApprovalController::class, 'index'])->name('dashboard.senior-manajer-sekper');
+    Route::get('/spi/dashboard', [ApprovalController::class, 'index'])->name('dashboard.kepala-spi');
+    Route::get('/direktur-teknik/dashboard', [ApprovalController::class, 'index'])->name('dashboard.direktur-teknik');
+    Route::get('/direktur-administrasi-keuangan/dashboard', [ApprovalController::class, 'index'])->name('dashboard.direktur-administrasi-keuangan');
+    Route::get('/direktur-utama/dashboard', [ApprovalController::class, 'index'])->name('dashboard.direktur-utama');
 });
 
 Route::middleware(['auth', 'role:admin_sdm'])->prefix('sdm')->name('sdm.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('pegawai', PegawaiController::class)->except(['show']);
+
     Route::get('/pegawai-import', [PegawaiImportController::class, 'form'])->name('pegawai.import.form');
     Route::post('/pegawai-import/preview', [PegawaiImportController::class, 'preview'])->name('pegawai.import.preview');
     Route::post('/pegawai-import/confirm', [PegawaiImportController::class, 'confirm'])->name('pegawai.import.confirm');
@@ -72,11 +80,6 @@ Route::middleware(['auth', 'role:admin_sdm'])->prefix('sdm')->name('sdm.')->grou
 
     Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
     Route::get('/monitoring/export-excel', [MonitoringController::class, 'exportExcel'])->name('monitoring.export.excel');
-    // export-pdf DIHAPUS SEMENTARA — MonitoringController::exportPdf() belum
-    // pernah kita buat. Tambahkan lagi kalau method-nya sudah ada.
 
-    // Kelola Data Pengguna — UserController yang sebelumnya belum terdaftar sama sekali.
     Route::resource('pengguna', UserController::class)->except(['show']);
-    Route::post('/pengguna/{pengguna}/status-manajer', [UserController::class, 'updateStatusManajer'])
-        ->name('pengguna.status-manajer');
 });

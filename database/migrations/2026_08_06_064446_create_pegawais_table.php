@@ -10,12 +10,22 @@ return new class extends Migration
     {
         Schema::create('pegawais', function (Blueprint $table) {
             $table->id();
-
             // Data identitas
-            $table->string('nik', 20)->unique(); // unique() sudah membuat index, tidak perlu index('nik') lagi
+            $table->string('nik', 20)->unique(); 
             $table->string('nama_pegawai', 100);
-            $table->enum('jenis_pegawai', ['pegawai', 'pekerja_lapangan']);
             $table->string('jabatan', 100);
+            $table->enum('posisi', [
+                'staf',
+                'asisten_manajer_bidang',
+                'manajer',
+                'senior_manajer_sekper',
+                'senior_manajer_bisnis',
+                'senior_manajer_keuangan_pelanggan',
+                'senior_manajer_produksi_distribusi',
+                'senior_manajer_perencanaan_aset',
+                'kepala_spi',
+                'sekretaris_spi',
+            ])->default('staf');
 
             // Struktur organisasi
             $table->foreignId('departemen_id')->constrained('departemens')->restrictOnDelete();
@@ -27,12 +37,12 @@ return new class extends Migration
 
             // Status pegawai
             $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
-
             $table->timestamps();
 
             // Index untuk pencarian & filter
             $table->index(['departemen_id', 'status']);
             $table->index(['subdepartemen_id', 'status']);
+            $table->index(['departemen_id', 'posisi']);
             $table->index('nama_pegawai');
         });
     }

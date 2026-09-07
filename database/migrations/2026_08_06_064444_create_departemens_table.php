@@ -12,6 +12,10 @@ return new class extends Migration
             $table->id();
             $table->string('kode_departemen', 20)->unique();
             $table->string('nama_departemen', 100);
+            $table->foreignId('divisi_id')
+                  ->nullable()
+                  ->constrained('divisis')
+                  ->nullOnDelete();
             $table->timestamps();
         });
     }

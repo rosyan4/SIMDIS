@@ -19,11 +19,6 @@ class User extends Authenticatable
         'role',
         'departemen_id',
         'subdepartemen_id',
-        'status_manajer',
-        'tanggal_mulai_berhalangan',
-        'tanggal_selesai_berhalangan',
-        'alasan_berhalangan',
-        'keterangan_tambahan',
         'is_active',
         'must_change_password',
     ];
@@ -36,18 +31,12 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at'           => 'datetime',
-            'password'                    => 'hashed',
-            'tanggal_mulai_berhalangan'   => 'date',
-            'tanggal_selesai_berhalangan' => 'date',
-            'is_active'                   => 'boolean',
-            'must_change_password'        => 'boolean',
+            'email_verified_at'    => 'datetime',
+            'password'             => 'hashed',
+            'is_active'            => 'boolean',
+            'must_change_password' => 'boolean',
         ];
     }
-
-    // ================================================================
-    // RELASI
-    // ================================================================
 
     public function departemen(): BelongsTo
     {
@@ -69,28 +58,18 @@ class User extends Authenticatable
         return $this->hasMany(Dispensasi::class, 'diproses_oleh_id');
     }
 
-    // ================================================================
-    // NAVIGASI
-    // ================================================================
-
-    /**
-     * Dipanggil oleh middleware RedirectIfAuthenticated (app/Http/Middleware)
-     * saat user yang sudah login mengakses halaman login/register — user
-     * langsung diarahkan ke dashboard sesuai role-nya.
-     *
-     * Nama rute di bawah HARUS sama persis dengan yang didaftarkan di
-     * routes/web.php. Route::has() tetap dipertahankan sebagai pengaman
-     * kalau suatu saat route-nya berubah nama lagi tanpa method ini
-     * ikut diperbarui — sistem tidak crash, hanya fallback ke '/'.
-     */
     public function dashboardRoute(): string
     {
         $routeName = match ($this->role) {
-            'admin_sdm'           => 'sdm.dashboard',
-            'admin_departemen'    => 'dashboard.admin-departemen',
-            'manajer_departemen'  => 'dashboard.manajer',
-            'asisten_manajer'     => 'dashboard.asmen',
-            default               => null,
+            'admin_sdm'                       => 'sdm.dashboard',
+            'admin_departemen'                => 'dispensasi.index',
+            'manajer_departemen'              => 'dashboard.manajer',
+            'senior_manajer_sekper'           => 'dashboard.senior-manajer-sekper',
+            'kepala_spi'                      => 'dashboard.kepala-spi',
+            'direktur_teknik'                 => 'dashboard.direktur-teknik',
+            'direktur_administrasi_keuangan'  => 'dashboard.direktur-administrasi-keuangan',
+            'direktur_utama'                  => 'dashboard.direktur-utama',
+            default                           => null,
         };
 
         if ($routeName && \Illuminate\Support\Facades\Route::has($routeName)) {
@@ -99,10 +78,6 @@ class User extends Authenticatable
 
         return '/';
     }
-
-    // ================================================================
-    // CHECK ROLE
-    // ================================================================
 
     public function isAdminSdm(): bool
     {
@@ -119,50 +94,42 @@ class User extends Authenticatable
         return $this->role === 'manajer_departemen';
     }
 
-    public function isAsistenManajer(): bool
+    public function isSeniorManajerSekper(): bool
     {
-        return $this->role === 'asisten_manajer';
+        return $this->role === 'senior_manajer_sekper';
     }
 
-    // ================================================================
-    // STATUS MANAJER
-    // ================================================================
-
-    public function sedangBerhalangan(): bool
+    public function isKepalaSpi(): bool
     {
-        if (! $this->isManajerDepartemen()) {
-            return false;
-        }
-
-        if ($this->status_manajer !== 'berhalangan') {
-            return false;
-        }
-
-        $today = now()->toDateString();
-
-        if ($this->tanggal_mulai_berhalangan && $today < $this->tanggal_mulai_berhalangan->toDateString()) {
-            return false;
-        }
-
-        if ($this->tanggal_selesai_berhalangan && $today > $this->tanggal_selesai_berhalangan->toDateString()) {
-            return false;
-        }
-
-        return true;
+        return $this->role === 'kepala_spi';
     }
 
-    public function sedangAktif(): bool
+    public function isDirekturTeknik(): bool
     {
-        if (! $this->isManajerDepartemen()) {
-            return false;
-        }
-
-        return $this->status_manajer === 'aktif' && $this->is_active;
+        return $this->role === 'direktur_teknik';
     }
 
-    // ================================================================
-    // SCOPE
-    // ================================================================
+    public function isDirekturAdministrasiKeuangan(): bool
+    {
+        return $this->role === 'direktur_administrasi_keuangan';
+    }
+
+    public function isDirekturUtama(): bool
+    {
+        return $this->role === 'direktur_utama';
+    }
+
+    public function isPemberiKeputusan(): bool
+    {
+        return in_array($this->role, [
+            'manajer_departemen',
+            'senior_manajer_sekper',
+            'kepala_spi',
+            'direktur_teknik',
+            'direktur_administrasi_keuangan',
+            'direktur_utama',
+        ]);
+    }
 
     public function scopeActive($query)
     {
@@ -172,19 +139,5 @@ class User extends Authenticatable
     public function scopeRole($query, string $role)
     {
         return $query->where('role', $role);
-    }
-
-    public function scopeManajerAktif($query)
-    {
-        return $query->where('role', 'manajer_departemen')
-                     ->where('status_manajer', 'aktif')
-                     ->where('is_active', true);
-    }
-
-    public function scopeManajerBerhalangan($query)
-    {
-        return $query->where('role', 'manajer_departemen')
-                     ->where('status_manajer', 'berhalangan')
-                     ->where('is_active', true);
     }
 }

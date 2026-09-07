@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Detail Dispensasi')
-@section('page-title', 'Detail Dispensasi')
+@section('title', 'Detail Pengajuan — ' . $dispensasi->nomor_dispensasi)
+@section('page-title', 'Detail Pengajuan')
 
 @section('content')
 @php
-    $waktuLabel = ['pagi' => 'Pagi', 'istirahat' => 'Istirahat', 'siang' => 'Siang', 'sore' => 'Sore'][$dispensasi->waktu_dispensasi] ?? $dispensasi->waktu_dispensasi;
+    $waktuLabel = $dispensasi->waktu_dispensasi;
     $statusLabel = match ($dispensasi->status_pengajuan) {
         'menunggu_persetujuan' => 'Menunggu Persetujuan',
         'disetujui' => 'Disetujui',
@@ -19,96 +19,108 @@
     };
 @endphp
 
-<div class="flex items-start justify-between gap-4 mb-8 flex-wrap">
-    <div>
-        <p class="text-xs font-semibold tracking-widest text-accent uppercase mb-1">Detail Pengajuan</p>
+<div class="mb-8">
+    <a href="{{ route('dispensasi.index') }}" class="text-xs text-accent font-semibold mb-2 inline-flex items-center gap-1">
+        <i class="fas fa-arrow-left"></i> Kembali ke Pengajuan Dispensasi
+    </a>
+    <div class="flex items-center gap-3 flex-wrap mt-2">
         <h1 class="font-display text-3xl text-ink">{{ $dispensasi->nomor_dispensasi }}</h1>
+        <span class="badge {{ $statusClass }}">{{ $statusLabel }}</span>
     </div>
-    <span class="badge {{ $statusClass }}">{{ $statusLabel }}</span>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="md:col-span-2 space-y-6">
+<div class="grid lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 space-y-4">
         <div class="card p-6">
-            <h2 class="font-display text-lg text-ink mb-4">Informasi Pengajuan</h2>
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <h3 class="font-semibold text-ink mb-4">Data Pegawai</h3>
+            <dl class="grid sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                    <dt class="text-ink-soft mb-0.5">Pegawai</dt>
+                    <dt class="text-xs text-ink-soft mb-0.5">NIK</dt>
+                    <dd class="mono-data text-ink">{{ $dispensasi->pegawai->nik }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Nama</dt>
                     <dd class="font-medium text-ink">{{ $dispensasi->pegawai->nama_pegawai }}</dd>
                 </div>
                 <div>
-                    <dt class="text-ink-soft mb-0.5">Subdepartemen</dt>
-                    <dd class="text-ink">{{ $dispensasi->subdepartemen->nama_subdepartemen ?? '-' }}</dd>
+                    <dt class="text-xs text-ink-soft mb-0.5">Jabatan</dt>
+                    <dd class="text-ink">{{ $dispensasi->pegawai->jabatan }}</dd>
                 </div>
                 <div>
-                    <dt class="text-ink-soft mb-0.5">Tanggal Dispensasi</dt>
-                    <dd class="text-ink">{{ $dispensasi->tanggal_dispensasi->format('d M Y') }}</dd>
-                </div>
-                <div>
-                    <dt class="text-ink-soft mb-0.5">Waktu</dt>
-                    <dd class="text-ink">{{ $waktuLabel }}</dd>
-                </div>
-                <div>
-                    <dt class="text-ink-soft mb-0.5">Tanggal Pengajuan</dt>
-                    <dd class="text-ink">{{ \Carbon\Carbon::parse($dispensasi->tanggal_pengajuan)->format('d M Y') }}</dd>
-                </div>
-                <div>
-                    <dt class="text-ink-soft mb-0.5">Diinput oleh</dt>
-                    <dd class="text-ink">{{ $dispensasi->adminDepartemen->name ?? '-' }}</dd>
+                    <dt class="text-xs text-ink-soft mb-0.5">Subdepartemen</dt>
+                    <dd class="text-ink">{{ $dispensasi->subdepartemen?->nama_subdepartemen ?? '-' }}</dd>
                 </div>
             </dl>
-
-            <div class="mt-4 pt-4 border-t">
-                <dt class="text-ink-soft mb-1 text-sm">Keterangan</dt>
-                <dd class="text-ink text-sm">{{ $dispensasi->keterangan }}</dd>
-            </div>
         </div>
 
         <div class="card p-6">
-            <h2 class="font-display text-lg text-ink mb-4">Bukti Pendukung</h2>
+            <h3 class="font-semibold text-ink mb-4">Detail Pengajuan</h3>
+            <dl class="grid sm:grid-cols-2 gap-4 text-sm mb-4">
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Tanggal Dispensasi</dt>
+                    <dd class="text-ink">{{ $dispensasi->tanggal_dispensasi->format('d M Y') }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Waktu</dt>
+                    <dd class="text-ink">{{ $waktuLabel }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Diajukan Oleh</dt>
+                    <dd class="text-ink">{{ $dispensasi->adminDepartemen?->name ?? '-' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Tanggal Pengajuan</dt>
+                    <dd class="text-ink">{{ $dispensasi->tanggal_pengajuan->format('d M Y') }}</dd>
+                </div>
+            </dl>
+            <div class="mb-4">
+                <dt class="text-xs text-ink-soft mb-1">Keterangan</dt>
+                <dd class="text-ink whitespace-pre-line">{{ $dispensasi->keterangan ?: '-' }}</dd>
+            </div>
             @if ($dispensasi->bukti_pendukung)
-                <a href="{{ Storage::url($dispensasi->bukti_pendukung) }}"
-                   target="_blank"
-                   class="btn btn-outline btn-sm">
-                    <i class="fas fa-paperclip"></i> Lihat Lampiran
-                </a>
-            @else
-                <p class="text-sm text-ink-soft">Tidak ada lampiran yang disertakan.</p>
+            <div>
+                <dt class="text-xs text-ink-soft mb-1">Bukti Pendukung</dt>
+                <dd>
+                    <a href="{{ asset('storage/' . $dispensasi->bukti_pendukung) }}" target="_blank" class="btn btn-sm btn-outline">
+                        <i class="fas fa-paperclip"></i> Lihat Lampiran
+                    </a>
+                </dd>
+            </div>
             @endif
         </div>
     </div>
 
-    <div class="space-y-6">
+    <div class="lg:col-span-1">
         <div class="card p-6">
-            <h2 class="font-display text-lg text-ink mb-4">Status</h2>
-
+            <h3 class="font-semibold text-ink mb-4">Status Keputusan</h3>
             @if ($dispensasi->status_pengajuan === 'menunggu_persetujuan')
-                <p class="text-sm text-ink-soft">
-                    <i class="fas fa-clock"></i> Menunggu keputusan dari pihak berwenang (Manajer Departemen atau Asisten Manajer).
-                </p>
+            <p class="text-sm text-ink-soft">
+                <i class="fas fa-clock text-[#C8862B]"></i>
+                Masih menunggu keputusan dari pihak berwenang. Anda akan mendapat notifikasi begitu ada keputusan.
+            </p>
             @else
-                <dl class="text-sm space-y-3">
-                    <div>
-                        <dt class="text-ink-soft mb-0.5">Diproses oleh</dt>
-                        <dd class="text-ink">{{ $dispensasi->diprosesOleh->name ?? '-' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-ink-soft mb-0.5">Tanggal Keputusan</dt>
-                        <dd class="text-ink">{{ optional($dispensasi->tanggal_keputusan)->format('d M Y H:i') ?? '-' }}</dd>
-                    </div>
-                    @if ($dispensasi->catatan_persetujuan)
-                    <div>
-                        <dt class="text-ink-soft mb-0.5">Catatan</dt>
-                        <dd class="text-ink">{{ $dispensasi->catatan_persetujuan }}</dd>
-                    </div>
-                    @endif
-                </dl>
+            <dl class="space-y-3 text-sm">
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Status</dt>
+                    <dd><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Diputuskan Oleh</dt>
+                    <dd class="text-ink">{{ $dispensasi->diprosesOleh?->name ?? '-' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Tanggal Keputusan</dt>
+                    <dd class="text-ink">{{ $dispensasi->tanggal_keputusan?->format('d M Y, H:i') ?? '-' }}</dd>
+                </div>
+                @if ($dispensasi->catatan_persetujuan)
+                <div>
+                    <dt class="text-xs text-ink-soft mb-0.5">Catatan</dt>
+                    <dd class="text-ink whitespace-pre-line">{{ $dispensasi->catatan_persetujuan }}</dd>
+                </div>
+                @endif
+            </dl>
             @endif
         </div>
-
-        <a href="{{ route('dispensasi.index') }}" class="btn btn-outline w-full">
-            <i class="fas fa-arrow-left"></i> Kembali ke Riwayat
-        </a>
     </div>
 </div>
 @endsection

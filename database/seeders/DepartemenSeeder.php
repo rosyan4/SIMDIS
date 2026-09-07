@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Departemen;
+use App\Models\Divisi;
 use App\Models\Subdepartemen;
 use Illuminate\Database\Seeder;
 
@@ -10,13 +11,45 @@ class DepartemenSeeder extends Seeder
 {
     public function run(): void
     {
+        $divisiDefinisi = [
+            'Divisi Perencanaan & Pengelolaan Aset' => [
+                'nama_senior_manajer' => 'Senior Manajer Perencanaan & Pengelolaan Aset',
+                'direktorat'          => 'Direktur Teknik',
+            ],
+            'Divisi Produksi & Distribusi' => [
+                'nama_senior_manajer' => 'Senior Manajer Produksi & Distribusi',
+                'direktorat'          => 'Direktur Teknik',
+            ],
+            'Divisi Keuangan & Pengelolaan Pelanggan' => [
+                'nama_senior_manajer' => 'Senior Manajer Keuangan & Pengelolaan Pelanggan',
+                'direktorat'          => 'Direktur Administrasi & Keuangan',
+            ],
+            'Divisi Bisnis' => [
+                'nama_senior_manajer' => 'Senior Manajer Bisnis',
+                'direktorat'          => 'Direktur Administrasi & Keuangan',
+            ],
+        ];
+
+        $divisiIds = [];
+        $urutan = 1;
+        foreach ($divisiDefinisi as $namaDivisi => $detail) {
+            $divisiIds[$namaDivisi] = Divisi::create([
+                'nama_divisi'          => $namaDivisi,
+                'nama_senior_manajer'  => $detail['nama_senior_manajer'],
+                'direktorat'           => $detail['direktorat'],
+                'urutan'               => $urutan++,
+            ])->id;
+        }
+
         $struktur = [
             'SPI' => [
                 'kode' => 'SPI',
+                'divisi' => null,
                 'subdepartemens' => [],
             ],
             'Sekretariat Perusahaan' => [
                 'kode' => 'SEK',
+                'divisi' => null,
                 'subdepartemens' => [
                     'Bidang Sekretariat & Rumah Tangga' => 'SEK-RT',
                     'Bidang Humas' => 'SEK-HMS',
@@ -26,6 +59,7 @@ class DepartemenSeeder extends Seeder
             ],
             'IT' => [
                 'kode' => 'IT',
+                'divisi' => null,
                 'subdepartemens' => [
                     'Aplikasi & Pengamanan IT' => 'IT-APP',
                     'Infrastruktur IT' => 'IT-INF',
@@ -33,12 +67,14 @@ class DepartemenSeeder extends Seeder
             ],
             'Pengadaan' => [
                 'kode' => 'PGD',
+                'divisi' => null,
                 'subdepartemens' => [
                     'Administrasi Pengadaan' => 'PGD-ADM',
                 ],
             ],
             'SDM' => [
                 'kode' => 'SDM',
+                'divisi' => null,
                 'subdepartemens' => [
                     'Personalia & Payroll' => 'SDM-PER',
                     'Pelatihan & Pengembangan' => 'SDM-DIK',
@@ -46,6 +82,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Bisnis Wilayah I' => [
                 'kode' => 'BSN1',
+                'divisi' => 'Divisi Bisnis',
                 'subdepartemens' => [
                     'Pemasaran Wilayah I' => 'BSN1-PMR',
                     'Sambung Baru Wilayah I' => 'BSN1-SB',
@@ -53,6 +90,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Bisnis Wilayah II' => [
                 'kode' => 'BSN2',
+                'divisi' => 'Divisi Bisnis',
                 'subdepartemens' => [
                     'Pemasaran Wilayah II' => 'BSN2-PMR',
                     'Sambung Baru Wilayah II' => 'BSN2-SB',
@@ -60,6 +98,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Keuangan' => [
                 'kode' => 'KEU',
+                'divisi' => 'Divisi Keuangan & Pengelolaan Pelanggan',
                 'subdepartemens' => [
                     'Akuntansi' => 'KEU-AKT',
                     'Anggaran' => 'KEU-ANG',
@@ -68,6 +107,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Pengelolaan Pelanggan' => [
                 'kode' => 'PEL',
+                'divisi' => 'Divisi Keuangan & Pengelolaan Pelanggan',
                 'subdepartemens' => [
                     'Meter Air' => 'PEL-MTR',
                     'Tunggakan Pelanggan' => 'PEL-TGK',
@@ -76,6 +116,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Produksi' => [
                 'kode' => 'PRD',
+                'divisi' => 'Divisi Produksi & Distribusi',
                 'subdepartemens' => [
                     'Laboratorium' => 'PRD-LAB',
                     'Pengolahan Air I' => 'PRD-OLA1',
@@ -85,6 +126,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Distribusi' => [
                 'kode' => 'DIST',
+                'divisi' => 'Divisi Produksi & Distribusi',
                 'subdepartemens' => [
                     'Pengaliran Wilayah I' => 'DIST-AL1',
                     'Pengaliran Wilayah II' => 'DIST-AL2',
@@ -93,6 +135,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Pengawasan Teknik & Pemeliharaan Bangunan' => [
                 'kode' => 'PWS',
+                'divisi' => 'Divisi Perencanaan & Pengelolaan Aset',
                 'subdepartemens' => [
                     'Pengawasan Teknik & Perizinan' => 'PWS-TEK',
                     'Pemeliharaan Bangunan & K3' => 'PWS-K3',
@@ -100,6 +143,7 @@ class DepartemenSeeder extends Seeder
             ],
             'Perencanaan dan Database Aset' => [
                 'kode' => 'REN',
+                'divisi' => 'Divisi Perencanaan & Pengelolaan Aset',
                 'subdepartemens' => [
                     'Perencanaan Aset' => 'REN-AST',
                     'Database Aset & GIS' => 'REN-GIS',
@@ -112,8 +156,7 @@ class DepartemenSeeder extends Seeder
             $departemen = Departemen::create([
                 'kode_departemen' => $detail['kode'],
                 'nama_departemen' => $namaDepartemen,
-                // Manajer Departemen TIDAK disimpan di sini — ditentukan lewat
-                // UserSeeder (users.role = 'manajer_departemen' + departemen_id).
+                'divisi_id'       => $detail['divisi'] ? $divisiIds[$detail['divisi']] : null,
             ]);
 
             foreach ($detail['subdepartemens'] as $namaSub => $kodeSub) {
@@ -121,8 +164,6 @@ class DepartemenSeeder extends Seeder
                     'departemen_id'       => $departemen->id,
                     'kode_subdepartemen'  => $kodeSub,
                     'nama_subdepartemen'  => $namaSub,
-                    // Asisten Manajer TIDAK disimpan di sini — ditentukan lewat
-                    // UserSeeder (users.role = 'asisten_manajer' + subdepartemen_id).
                 ]);
             }
         }
