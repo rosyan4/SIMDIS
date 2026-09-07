@@ -22,7 +22,6 @@
         'admin_departemen'               => 'Admin Departemen',
         'manajer_departemen'             => 'Manajer Departemen',
         'senior_manajer_sekper'          => 'Senior Manajer Sekretaris Perusahaan',
-        'senior_manajer_produksi_distribusi' => 'Senior Manajer Produksi & Distribusi',
         'kepala_spi'                     => 'Kepala SPI',
         'direktur_teknik'                => 'Direktur Teknik',
         'direktur_administrasi_keuangan' => 'Direktur Administrasi & Keuangan',
