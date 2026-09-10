@@ -8,6 +8,7 @@ use App\Models\Departemen;
 use App\Models\Dispensasi;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -19,6 +20,8 @@ class MonitoringController extends Controller
         9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
     ];
 
+    private const URUTAN_WAKTU = ['T', 'TBO', 'TBI', 'CP'];
+
     public function index(Request $request)
     {
         $tahun = $request->input('tahun');
@@ -26,11 +29,38 @@ class MonitoringController extends Controller
         $departemenId = $request->input('departemen_id');
         $status = $request->input('status');
 
-        $dispensasis = $this->filteredQuery($tahun, $bulan, $departemenId, $status)
+        $semuaBaris = $this->filteredQuery($tahun, $bulan, $departemenId, $status)
             ->with(['pegawai', 'departemen', 'subdepartemen', 'diprosesOleh'])
             ->orderByDesc('tanggal_dispensasi')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
+
+        $kelompok = $semuaBaris
+            ->groupBy(fn ($d) => $d->pegawai_id . '|' . $d->tanggal_dispensasi->format('Y-m-d'))
+            ->map(function ($baris) {
+                $acuan = $baris->first();
+                $statusUnik = $baris->pluck('status_pengajuan')->unique();
+                return (object) [
+                    'acuan'         => $acuan,
+                    'baris'         => $baris->sortBy(
+                        fn ($d) => array_search($d->waktu_dispensasi, self::URUTAN_WAKTU)
+                    )->values(),
+                    'nomor_list'    => $baris->pluck('nomor_dispensasi')->implode(', '),
+                    'statusSeragam' => $statusUnik->count() === 1 ? $statusUnik->first() : null,
+                    'tanggal_dispensasi' => $acuan->tanggal_dispensasi,
+                ];
+            })
+            ->sortByDesc('tanggal_dispensasi')
+            ->values();
+
+        $perPage = 20;
+        $halaman = $request->input('page', 1);
+        $dispensasis = new LengthAwarePaginator(
+            $kelompok->forPage($halaman, $perPage)->values(),
+            $kelompok->count(),
+            $perPage,
+            $halaman,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return view('sdm.monitoring.index', [
             'dispensasis' => $dispensasis,
@@ -92,12 +122,6 @@ class MonitoringController extends Controller
         return $query;
     }
 
-    /**
-     * Daftar tahun yang tersedia di database + tahun sekarang (kalau belum
-     * ada data di tahun berjalan, tetap ditampilkan supaya admin bisa
-     * langsung filter ke tahun ini). Konsisten dengan
-     * DashboardController::getTahunTersedia().
-     */
     private function tahunTersedia(): array
     {
         $tahun = Dispensasi::selectRaw('DISTINCT YEAR(tanggal_dispensasi) as tahun')

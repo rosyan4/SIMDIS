@@ -91,18 +91,15 @@ class Departemen extends Model
 
     public function pemberiKeputusanUtama(): ?User
     {
-        static $direkturTeknik = null;
-        static $direkturTeknikSudahDicek = false;
+        $produksiDistribusi = ['PRD', 'DIST'];
+        $perencanaanAset = ['PWS', 'REN'];
 
-        $departemenTeknik = ['PWS', 'REN', 'PRD', 'DIST'];
+        if (in_array($this->kode_departemen, $produksiDistribusi, true)) {
+            return User::where('role', 'senior_manajer_produksi_distribusi')->where('is_active', true)->first();
+        }
 
-        if (in_array($this->kode_departemen, $departemenTeknik, true)) {
-            if (! $direkturTeknikSudahDicek) {
-                $direkturTeknik = User::where('role', 'direktur_teknik')->where('is_active', true)->first();
-                $direkturTeknikSudahDicek = true;
-            }
-
-            return $direkturTeknik;
+        if (in_array($this->kode_departemen, $perencanaanAset, true)) {
+            return User::where('role', 'senior_manajer_perencanaan_aset')->where('is_active', true)->first();
         }
 
         return match ($this->kode_departemen) {

@@ -19,8 +19,6 @@ class DispensasiExport implements FromQuery, WithHeadings, WithMapping, WithTitl
 
     private int $nomor = 0;
 
-    private ?int $pegawaiIdSebelumnya = null;
-
     public function __construct(
         private readonly ?string $tahun,
         private readonly ?string $bulan,
@@ -79,21 +77,16 @@ class DispensasiExport implements FromQuery, WithHeadings, WithMapping, WithTitl
     {
         $this->nomor++;
 
-        $waktuLabel = $dispensasi->waktu_dispensasi;
-
-        $pegawaiBaru = $dispensasi->pegawai_id !== $this->pegawaiIdSebelumnya;
-        $this->pegawaiIdSebelumnya = $dispensasi->pegawai_id;
-
         return [
             $this->nomor,
             $dispensasi->nomor_dispensasi,
             $dispensasi->departemen->nama_departemen,
             $dispensasi->subdepartemen?->nama_subdepartemen ?? '-',
             $dispensasi->pegawai->nik,
-            $pegawaiBaru ? $dispensasi->pegawai->nama_pegawai : '',
+            $dispensasi->pegawai->nama_pegawai,
             $dispensasi->pegawai->jabatan,
             $dispensasi->tanggal_dispensasi->format('d-m-Y'),
-            $waktuLabel,
+            $dispensasi->waktu_dispensasi,
             $dispensasi->keterangan,
             $dispensasi->diprosesOleh?->name ?? '-',
             $dispensasi->tanggal_keputusan?->format('d-m-Y H:i') ?? '-',
